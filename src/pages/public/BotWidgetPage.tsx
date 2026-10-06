@@ -1,0 +1,269 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { 
+  Send, 
+  Bot, 
+  User, 
+  RefreshCw, 
+  ExternalLink, 
+  ChevronRight,
+  MessageSquare,
+  Sparkles,
+  Info
+} from 'lucide-react';
+import { ragBotAPI } from '@/services/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { BotWidgetSkeleton } from '@/components/skeletons';
+import { v4 as uuidv4 } from 'uuid';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: any[];
+  timestamp: Date;
+}
+
+export default function BotWidgetPage() {
+    const { botId } = useParams();
+    const [searchParams] = useSearchParams();
+    const apiKey = searchParams.get('apiKey');
+    const sessionIdRef = useRef(uuidv4());
+    
+    const [bot, setBot] = useState<any>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isThinking, setIsThinking] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        if (botId && apiKey) {
+            fetchConfig();
+        } else {
+            setError('Missing configuration (Bot ID or API Key)');
+        }
+    }, [botId, apiKey]);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages, isThinking]);
+
+    const fetchConfig = async () => {
+        try {
+            setIsLoading(true);
+            const response = await ragBotAPI.getPublicConfig(botId!, apiKey!);
+            setBot(response.data.data);
+            
+            // Add initial greeting
+            setMessages([
+                {
+                    role: 'assistant',
+                    content: response.data.data.widget.greeting || 'Hi! How can I help you today?',
+                    timestamp: new Date()
+                }
+            ]);
+        } catch (error: any) {
+            setError(error.response?.data?.message || 'Failed to load bot configuration');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSend = async () => {
+        if (!input.trim() || isThinking || !bot) return;
+
+        const userMsg: Message = {
+            role: 'user',
+            content: input,
+            timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, userMsg]);
+        setInput('');
+        setIsThinking(true);
+
+        try {
+            const response = await ragBotAPI.publicChat(botId!, {
+                message: input,
+                sessionId: sessionIdRef.current,
+                apiKey: apiKey!,
+                history: messages.slice(-6).map(m => ({ role: m.role, content: m.content }))
+            });
+
+            const assistantMsg: Message = {
+                role: 'assistant',
+                content: response.data.data.message,
+                sources: response.data.data.sources,
+                timestamp: new Date()
+            };
+
+            setMessages(prev => [...prev, assistantMsg]);
+        } catch (error: any) {
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: 'Sorry, I encountered an error. Please try again later.',
+                timestamp: new Date()
+            }]);
+        } finally {
+            setIsThinking(false);
+        }
+    };
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center bg-gray-50">
+                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                    <Info className="w-8 h-8" />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">Connection Error</h2>
+                <p className="text-sm text-gray-500 mt-1 max-w-xs">{error}</p>
+                <Button variant="outline" className="mt-6" onClick={() => window.location.reload()}>
+                    Retry Connection
+                </Button>
+            </div>
+        );
+    }
+
+    if (isLoading || !bot) {
+        return <BotWidgetSkeleton />;
+    }
+
+    return (
+        <div className="flex flex-col h-screen max-h-screen bg-transparent">
+            {/* Header */}
+            <div 
+                className="p-4 flex items-center gap-3 shadow-md z-10 sticky top-0"
+                style={{ backgroundColor: bot.widget.primaryColor, color: '#fff' }}
+            >
+                <Avatar className="h-10 w-10 border-2 border-white/20">
+                    {bot.widget.avatarUrl ? (
+                        <AvatarImage src={bot.widget.avatarUrl} />
+                    ) : (
+                        <AvatarFallback className="bg-white/20 text-white">
+                            <Bot className="w-6 h-6" />
+                        </AvatarFallback>
+                    )}
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                    <h1 className="font-bold truncate text-sm leading-tight">{bot.widget.name}</h1>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                        <p className="text-[10px] text-white/70 font-medium">Online & Ready</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Chat Area */}
+            <ScrollArea className="flex-1 p-4 bg-[#f8fafc]">
+                <div className="space-y-4 pb-4">
+                    {messages.map((msg, idx) => (
+                        <div 
+                            key={idx}
+                            className={cn(
+                                "flex w-full mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                                msg.role === 'user' ? "justify-end" : "justify-start"
+                            )}
+                        >
+                            <div className={cn(
+                                "max-w-[85%] rounded-2xl p-3 shadow-sm",
+                                msg.role === 'user' 
+                                    ? "bg-indigo-600 text-white rounded-tr-none" 
+                                    : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
+                            )}>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                                
+                                {msg.sources && msg.sources.length > 0 && bot.widget.showSources && (
+                                    <div className="mt-3 pt-3 border-t border-gray-100">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1.5">Sources</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {msg.sources.map((source, sIdx) => (
+                                                <Badge 
+                                                    key={sIdx} 
+                                                    variant="secondary" 
+                                                    className="bg-gray-50 text-[9px] py-0 h-5 border-gray-100 text-gray-500 hover:text-indigo-600 cursor-pointer flex items-center gap-1"
+                                                >
+                                                    <ExternalLink className="w-2 h-2" />
+                                                    {source.sourceFile || (source.sourceUrl ? new URL(source.sourceUrl).hostname : 'CMS')}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <p className={cn(
+                                    "text-[9px] mt-1.5 opacity-50 text-right",
+                                    msg.role === 'user' ? "text-white" : "text-gray-400"
+                                )}>
+                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                    
+                    {isThinking && (
+                        <div className="flex justify-start mb-4">
+                            <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />
+                            </div>
+                        </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                </div>
+            </ScrollArea>
+
+            {/* Input Area */}
+            <div className="p-4 bg-white border-t border-gray-100">
+                {bot.widget.suggestedQuestions && bot.widget.suggestedQuestions.length > 0 && messages.length === 1 && (
+                    <div className="flex gap-2 overflow-x-auto pb-3 no-scrollbar scroll-smooth">
+                        {bot.widget.suggestedQuestions.map((q: string, idx: number) => (
+                            <button
+                                key={idx}
+                                onClick={() => { setInput(q); }}
+                                className="whitespace-nowrap px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-100 transition-colors border border-indigo-100"
+                            >
+                                {q}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                <div className="relative flex items-center gap-2">
+                    <Input
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                        placeholder={bot.widget.placeholder || "Ask me anything..."}
+                        className="pr-24 py-6 border-gray-200 focus-visible:ring-indigo-500 shadow-sm rounded-xl"
+                    />
+                    <div className="absolute right-1.5 flex items-center gap-1">
+                        <Button 
+                            size="icon" 
+                            className="bg-indigo-600 hover:bg-indigo-700 h-9 w-9 rounded-lg"
+                            onClick={handleSend}
+                            disabled={!input.trim() || isThinking}
+                        >
+                            {isThinking ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        </Button>
+                    </div>
+                </div>
+                <div className="mt-3 flex items-center justify-center gap-1.5">
+                    <p className="text-[9px] text-gray-400 font-medium tracking-tight">AI can make mistakes. Built with</p>
+                    <div className="flex items-center gap-0.5 text-indigo-600 font-bold text-[9px] uppercase tracking-tighter">
+                        <Sparkles className="w-2.5 h-2.5" /> Headless CMS
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
