@@ -59,6 +59,7 @@ import { mediaAPI } from '@/services/api';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 import { ImageEditor } from '@/components/media/ImageEditor';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface MediaFile {
     _id: string;
@@ -101,6 +102,7 @@ export default function MediaLibraryPage() {
     const [targetMoveFolder, setTargetMoveFolder] = useState('');
     const [imageEditorOpen, setImageEditorOpen] = useState(false);
     const [editingFile, setEditingFile] = useState<MediaFile | null>(null);
+    const [deleteFolderTarget, setDeleteFolderTarget] = useState<string | null>(null);
 
     // Fetch media files
     const { data, isLoading, refetch } = useQuery({
@@ -323,9 +325,7 @@ export default function MediaLibraryPage() {
     };
 
     const handleDeleteFolder = (folderName: string) => {
-        if (confirm(`Are you sure you want to delete the folder "${folderName}"? This will only work if the folder is empty.`)) {
-            deleteFolderMutation.mutate(folderName);
-        }
+        setDeleteFolderTarget(folderName);
     };
 
     const handleEditImage = (file: MediaFile) => {
@@ -1030,6 +1030,21 @@ export default function MediaLibraryPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <ConfirmDialog
+                open={!!deleteFolderTarget}
+                onOpenChange={(open) => !open && setDeleteFolderTarget(null)}
+                title="Delete Folder"
+                description={`Are you sure you want to delete the folder "${deleteFolderTarget}"? This will only work if the folder is empty.`}
+                confirmText="Delete Folder"
+                variant="destructive"
+                onConfirm={() => {
+                    if (deleteFolderTarget) {
+                        deleteFolderMutation.mutate(deleteFolderTarget);
+                        setDeleteFolderTarget(null);
+                    }
+                }}
+            />
 
             {/* Image Editor */}
             {editingFile && (

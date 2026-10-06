@@ -20,6 +20,8 @@ export {
   DialogTitle,
   DialogDescription,
 } from './dialog';
+export * from './alert-dialog';
+export { ConfirmDialog } from './ConfirmDialog';
 export {
   Select,
   SelectGroup,

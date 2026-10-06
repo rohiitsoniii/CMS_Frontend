@@ -20,28 +20,28 @@ import {
     MessageSquare,
     HelpCircle,
     Newspaper,
-    ScrollText
+    ScrollText,
+    FolderKanban,
+    CreditCard,
+    ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/store';
 import { NotificationCenter } from '@/components/ui/NotificationCenter';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 
 const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
     { name: 'Content', href: '/dashboard/content', icon: FileText },
-    { name: 'Hero Sections', href: '/dashboard/content/hero', icon: Layers },
-    { name: 'Navigation', href: '/dashboard/content/navigation', icon: Navigation },
-    { name: 'Blog Posts', href: '/dashboard/content/blog', icon: Newspaper },
-    { name: 'Gallery', href: '/dashboard/content/gallery', icon: ImageIcon },
-    { name: 'Testimonials', href: '/dashboard/content/testimonials', icon: MessageSquare },
-    { name: 'FAQs', href: '/dashboard/content/faq', icon: HelpCircle },
     { name: 'Media Library', href: '/dashboard/media', icon: Image },
     { name: 'API Keys', href: '/dashboard/api-keys', icon: Key },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+    { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
     { name: 'Audit Logs', href: '/dashboard/audit-logs', icon: ScrollText },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+    { name: 'Support', href: '/dashboard/support', icon: HelpCircle },
 ];
 
 export default function DashboardLayout() {
@@ -211,6 +211,9 @@ export default function DashboardLayout() {
 
                 {/* Page content */}
                 <main className="p-4 lg:p-8">
+                    <div className="mb-6">
+                        <Breadcrumbs />
+                    </div>
                     <Outlet />
                 </main>
             </div>

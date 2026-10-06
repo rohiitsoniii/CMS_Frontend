@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface EmbedCodeStepProps {
   bot: any;
@@ -36,6 +37,7 @@ const EmbedCodeStep: React.FC<EmbedCodeStepProps> = ({ bot, projectId, botId }) 
   const [newOrigin, setNewOrigin] = useState('');
   const [origins, setOrigins] = useState<string[]>(bot.allowedOrigins || []);
   const [regenerating, setRegenerating] = useState(false);
+  const [showRegenConfirm, setShowRegenConfirm] = useState(false);
 
   // Use the backend URL for the script source
   const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -80,16 +82,16 @@ const EmbedCodeStep: React.FC<EmbedCodeStepProps> = ({ bot, projectId, botId }) 
   };
 
   const handleRegenerateKey = async () => {
-    if (!window.confirm('Regenerating the API key will break your existing installations. Proceed?')) return;
     setRegenerating(true);
     try {
-      const response = await ragBotAPI.regenerateKey(projectId, botId);
+      await ragBotAPI.regenerateKey(projectId, botId);
       toast.success('API Key regenerated');
       window.location.reload(); 
-    } catch (error) {
+    } catch {
       toast.error('Failed to regenerate key');
     } finally {
       setRegenerating(false);
+      setShowRegenConfirm(false);
     }
   };
 
@@ -251,7 +253,7 @@ const EmbedCodeStep: React.FC<EmbedCodeStepProps> = ({ bot, projectId, botId }) 
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleRegenerateKey}
+              onClick={() => setShowRegenConfirm(true)}
               disabled={regenerating}
               className="text-red-600 hover:text-red-700 hover:bg-red-50 font-bold text-xs"
             >
@@ -270,6 +272,15 @@ const EmbedCodeStep: React.FC<EmbedCodeStepProps> = ({ bot, projectId, botId }) 
         </section>
 
       </div>
+      <ConfirmDialog
+        open={showRegenConfirm}
+        onOpenChange={setShowRegenConfirm}
+        title="Regenerate API Key"
+        description="Regenerating the API key will break your existing installations until they are updated with the new secret. Proceed?"
+        confirmText="Regenerate Key"
+        variant="destructive"
+        onConfirm={handleRegenerateKey}
+      />
     </div>
   );
 };

@@ -5,6 +5,9 @@ import { localeAPI } from '@/services/api';
 import { TranslationSettingsPanel } from './TranslationSettingsPanel';
 import { toast } from 'react-hot-toast';
 import { LocalesSkeleton } from '@/components/skeletons';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export interface Locale {
     _id?: string;
@@ -24,6 +27,7 @@ export function LocalesPage() {
     const [translating, setTranslating] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingLocale, setEditingLocale] = useState<Locale | null>(null);
+    const [deleteTargetCode, setDeleteTargetCode] = useState<string | null>(null);
 
     useEffect(() => {
         loadData();
@@ -52,14 +56,10 @@ export function LocalesPage() {
     };
 
     const handleDelete = async (code: string) => {
-        if (!confirm('Are you sure you want to delete this locale? This action cannot be undone.')) {
-            return;
-        }
-
         try {
             await localeAPI.remove(code);
-            setLocales(locales.filter(l => l.code !== code));
-            toast.success(`Locale ${code} removed`);
+            toast.success('Locale removed');
+            loadData();
         } catch (error) {
             console.error('Failed to delete locale:', error);
             toast.error('Failed to delete locale');
@@ -67,12 +67,10 @@ export function LocalesPage() {
     };
 
     const handleSetDefault = async (code: string) => {
-        if (!projectId) return;
-
         try {
-            await localeAPI.update(code, { isDefault: true });
-            await loadData();
-            toast.success(`${code} set as default locale`);
+            await localeAPI.setDefault(code);
+            toast.success('Default locale updated');
+            loadData();
         } catch (error) {
             console.error('Failed to set default locale:', error);
             toast.error('Failed to set default locale');
@@ -80,16 +78,13 @@ export function LocalesPage() {
     };
 
     const handleBulkTranslate = async () => {
-        if (!confirm('This will translate all published content into your enabled languages. Depending on your content volume, this may take a while and incur Google API costs. Continue?')) {
-            return;
-        }
-        
         try {
             setTranslating(true);
-            const response = await localeAPI.translateAll();
-            toast.success(response.data.message || 'Bulk translation started');
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Bulk translation failed');
+            await localeAPI.bulkTranslate();
+            toast.success('Bulk translation process completed');
+        } catch (error) {
+            console.error('Translation failed:', error);
+            toast.error('Translation failed');
         } finally {
             setTranslating(false);
         }
@@ -100,142 +95,152 @@ export function LocalesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 pb-20">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 shadow-sm">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-indigo-600 rounded-xl">
-                                <Languages className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Locales & Translation</h1>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Manage languages and automated content workflows</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleBulkTranslate}
-                                disabled={translating || !config?.autoTranslate}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-600 transition-all disabled:opacity-50"
-                            >
-                                <RefreshCw className={`w-4 h-4 ${translating ? 'animate-spin' : ''}`} />
-                                Bulk Translate
-                            </button>
-                            <button
-                                onClick={() => setShowAddModal(true)}
-                                className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none rounded-xl text-sm font-bold hover:bg-indigo-700 hover:-translate-y-0.5 transition-all"
-                            >
-                                <Plus className="w-5 h-5" />
-                                Add Locale
-                            </button>
-                        </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-600 rounded-xl text-white shadow-sm">
+                        <Languages className="w-6 h-6" />
                     </div>
+                    <div>
+                        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Locales & Translation</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage project languages, fallbacks, and automated content translations</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={handleBulkTranslate}
+                        disabled={translating || !config?.autoTranslate}
+                    >
+                        <RefreshCw className={`w-4 h-4 mr-2 ${translating ? 'animate-spin' : ''}`} />
+                        Bulk Translate
+                    </Button>
+                    <Button
+                        onClick={() => setShowAddModal(true)}
+                        className="shadow-sm"
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Locale
+                    </Button>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main Locales Grid */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <Globe className="w-5 h-5 text-indigo-500" />
-                            Active Locales
-                        </h2>
-                        
-                        {locales.length === 0 ? (
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-12 text-center">
-                                <Globe className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No locales found</h3>
-                                <p className="text-gray-500 mb-6">Start by adding a language for your content project.</p>
-                                <button
-                                    onClick={() => setShowAddModal(true)}
-                                    className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all"
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Main Locales Grid */}
+                <div className="lg:col-span-2 space-y-4">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-indigo-500" />
+                        Active Locales ({locales.length})
+                    </h2>
+                    
+                    {locales.length === 0 ? (
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-12 text-center">
+                            <Globe className="w-14 h-14 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">No locales configured</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Start by adding a default language for your content model.</p>
+                            <Button
+                                onClick={() => setShowAddModal(true)}
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Your First Locale
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {locales.map((locale) => (
+                                <div
+                                    key={locale.code}
+                                    className={`group bg-white dark:bg-gray-800 rounded-xl border p-5 transition-all hover:shadow-md flex flex-col justify-between ${
+                                        locale.isDefault
+                                            ? 'border-indigo-500 ring-1 ring-indigo-500/20'
+                                            : 'border-gray-200/80 dark:border-gray-800'
+                                    }`}
                                 >
-                                    Add Your First Locale
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {locales.map((locale) => (
-                                    <div
-                                        key={locale.code}
-                                        className={`group bg-white dark:bg-gray-800 rounded-2xl border p-5 transition-all hover:shadow-md ${
-                                            locale.isDefault ? 'border-indigo-500 ring-1 ring-indigo-500/20' : 'border-gray-200 dark:border-gray-700'
-                                        }`}
-                                    >
-                                        <div className="flex items-start justify-between">
+                                    <div>
+                                        <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg text-lg font-bold text-indigo-600 dark:text-indigo-400 capitalize">
+                                                <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700/60 rounded-lg text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase">
                                                     {locale.code.substring(0, 2)}
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                                    <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-1.5 text-sm">
                                                         {locale.name}
-                                                        {locale.isDefault && <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />}
+                                                        {locale.isDefault && (
+                                                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                                        )}
                                                     </h3>
-                                                    <span className="text-xs text-gray-500 font-mono tracking-wider">{locale.code.toUpperCase()}</span>
+                                                    <span className="text-xs text-gray-400 font-mono tracking-wider">{locale.code.toUpperCase()}</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    aria-label={`Edit ${locale.name}`}
                                                     onClick={() => setEditingLocale(locale)}
-                                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-indigo-600"
+                                                    className="h-8 w-8 hover:text-indigo-600 dark:hover:text-indigo-400"
                                                 >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
+                                                    <Edit className="w-3.5 h-3.5" />
+                                                </Button>
                                                 {!locale.isDefault && (
-                                                    <button
-                                                        onClick={() => handleDelete(locale.code)}
-                                                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors text-gray-400 hover:text-red-600"
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        aria-label={`Delete ${locale.name}`}
+                                                        onClick={() => setDeleteTargetCode(locale.code)}
+                                                        className="h-8 w-8 hover:text-red-600 dark:hover:text-red-400"
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </Button>
                                                 )}
                                             </div>
-                                        </div>
-
-                                        <div className="mt-4 flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                                    locale.isEnabled 
-                                                        ? 'bg-green-100 dark:bg-green-900/20 text-green-600' 
-                                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-500'
-                                                }`}>
-                                                    {locale.isEnabled ? 'Active' : 'Disabled'}
-                                                </span>
-                                                {config?.autoTranslate && config?.translationApiKey && !locale.isDefault && (
-                                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 rounded-full text-[10px] font-bold text-blue-600 uppercase">
-                                                        <Zap className="w-2.5 h-2.5" />
-                                                        Auto
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {!locale.isDefault && locale.isEnabled && (
-                                                <button
-                                                    onClick={() => handleSetDefault(locale.code)}
-                                                    className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
-                                                >
-                                                    Set as Default
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
 
-                    {/* Settings Sidebar */}
-                    <div className="space-y-6">
-                        <TranslationSettingsPanel 
-                            projectId={projectId!}
-                            config={config}
-                            onUpdate={loadData}
-                        />
-                    </div>
+                                    <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <Badge
+                                                variant={locale.isEnabled ? 'default' : 'secondary'}
+                                                className={`text-[10px] px-1.5 py-0 font-normal ${
+                                                    locale.isEnabled
+                                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                                        : ''
+                                                }`}
+                                            >
+                                                {locale.isEnabled ? 'Active' : 'Disabled'}
+                                            </Badge>
+                                            {config?.autoTranslate && config?.translationApiKey && !locale.isDefault && (
+                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600 dark:text-blue-400 border-blue-500/20">
+                                                    <Zap className="w-2.5 h-2.5 mr-0.5" />
+                                                    Auto
+                                                </Badge>
+                                            )}
+                                        </div>
+
+                                        {!locale.isDefault && locale.isEnabled && (
+                                            <button
+                                                onClick={() => handleSetDefault(locale.code)}
+                                                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                                            >
+                                                Set Default
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Settings Sidebar */}
+                <div className="space-y-6">
+                    <TranslationSettingsPanel 
+                        projectId={projectId!}
+                        config={config}
+                        onUpdate={loadData}
+                    />
                 </div>
             </div>
 
@@ -257,6 +262,21 @@ export function LocalesPage() {
                     }}
                 />
             )}
+
+            {/* Accessible Confirmation Dialog */}
+            <ConfirmDialog
+                open={!!deleteTargetCode}
+                onOpenChange={(open) => !open && setDeleteTargetCode(null)}
+                title={`Delete locale "${deleteTargetCode?.toUpperCase()}"?`}
+                description="This will remove this locale configuration and prevent new localized entries in this language. This action cannot be undone."
+                confirmText="Delete Locale"
+                onConfirm={() => {
+                    if (deleteTargetCode) {
+                        handleDelete(deleteTargetCode);
+                        setDeleteTargetCode(null);
+                    }
+                }}
+            />
         </div>
     );
 }
@@ -315,28 +335,29 @@ function LocaleModal({
 
     return (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-8 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+            <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
                 
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">
                     {locale ? 'Modify Locale' : 'New Content Language'}
                 </h2>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Quick Select from Curated List */}
                     {!locale && (
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase text-gray-500 tracking-widest">
+                        <div className="space-y-1.5">
+                            <label htmlFor="curated-language-select" className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 tracking-wider">
                                 Pick from Curated List
                             </label>
                             <select
+                                id="curated-language-select"
                                 onChange={(e) => {
                                     const selected = supportedLanguages.find(l => l.code === e.target.value);
                                     if (selected) {
                                         setFormData({ ...formData, code: selected.code, name: selected.name });
                                     }
                                 }}
-                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none text-gray-700 dark:text-gray-200"
                             >
                                 <option value="">Select a language...</option>
                                 {supportedLanguages.map((l) => (
@@ -348,36 +369,39 @@ function LocaleModal({
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase text-gray-500 tracking-widest">Code</label>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                            <label htmlFor="locale-code" className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 tracking-wider">Code</label>
                             <input
+                                id="locale-code"
                                 type="text"
                                 value={formData.code}
                                 disabled={!!locale}
                                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                                 placeholder="en"
-                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-mono text-sm outline-none disabled:opacity-50"
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all font-mono text-sm outline-none disabled:opacity-50 text-gray-900 dark:text-white"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase text-gray-500 tracking-widest">Label</label>
+                        <div className="space-y-1.5">
+                            <label htmlFor="locale-label" className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 tracking-wider">Label</label>
                             <input
+                                id="locale-label"
                                 type="text"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 placeholder="English"
-                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none text-gray-900 dark:text-white"
                             />
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-black uppercase text-gray-500 tracking-widest">Fallback Path</label>
+                    <div className="space-y-1.5">
+                        <label htmlFor="fallback-locale-select" className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 tracking-wider">Fallback Path</label>
                         <select
+                            id="fallback-locale-select"
                             value={formData.fallbackLocale}
                             onChange={(e) => setFormData({ ...formData, fallbackLocale: e.target.value })}
-                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                            className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none text-gray-700 dark:text-gray-200"
                         >
                             <option value="">System Default (en)</option>
                             {existingLocales
@@ -403,21 +427,22 @@ function LocaleModal({
                         </label>
                     </div>
 
-                    <div className="flex items-center gap-3 pt-6">
-                        <button
+                    <div className="flex items-center gap-3 pt-4">
+                        <Button
                             type="button"
+                            variant="outline"
                             onClick={onClose}
-                            className="flex-1 px-6 py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+                            className="flex-1"
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
                             disabled={saving}
-                            className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all disabled:opacity-50"
+                            className="flex-1"
                         >
                             {saving ? 'Saving...' : locale ? 'Update' : 'Register'}
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>
@@ -425,3 +450,4 @@ function LocaleModal({
     );
 }
 
+export default LocalesPage;

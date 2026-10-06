@@ -1,9 +1,10 @@
-﻿import toast from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, GripVertical, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Save, GitBranch } from 'lucide-react';
 import { workflowService, WorkflowStep } from '@/services/workflowService';
 import { WorkflowBuilderSkeleton } from '@/components/skeletons';
+import { Button } from '@/components/ui/button';
 
 export function WorkflowBuilderPage() {
     const { projectId, workflowId } = useParams<{ projectId: string; workflowId?: string }>();
@@ -91,7 +92,7 @@ export function WorkflowBuilderPage() {
         // Validate steps
         for (let i = 0; i < formData.steps.length; i++) {
             if (!formData.steps[i].name) {
-                alert(`Please enter a name for step ${i + 1}`);
+                toast.error(`Please enter a name for step ${i + 1}`);
                 return;
             }
         }
@@ -110,6 +111,7 @@ export function WorkflowBuilderPage() {
                 await workflowService.createWorkflow(payload);
             }
 
+            toast.success('Workflow saved successfully');
             navigate(`/dashboard/project/${projectId}/workflows`);
         } catch (error) {
             console.error('Failed to save workflow:', error);
@@ -124,173 +126,183 @@ export function WorkflowBuilderPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="space-y-6 max-w-5xl mx-auto">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
-                <div className="max-w-5xl mx-auto px-6 py-6">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => navigate(`/dashboard/project/${projectId}/workflows`)}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                        </button>
-                        <div className="flex-1">
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                                {isEditMode ? 'Edit Workflow' : 'Create Workflow'}
-                            </h1>
-                            <p className="text-gray-600 dark:text-gray-400 mt-1">
-                                {isEditMode ? 'Update your approval workflow' : 'Define a new approval workflow'}
-                            </p>
-                        </div>
-                    </div>
+            <div className="flex items-center gap-4 pb-4 border-b border-gray-200 dark:border-gray-800">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate(`/dashboard/project/${projectId}/workflows`)}
+                    aria-label="Back to workflows"
+                    className="h-9 w-9 text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <div>
+                    <h1 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <GitBranch className="w-5 h-5 text-indigo-500" />
+                        {isEditMode ? 'Edit Workflow' : 'Create Workflow'}
+                    </h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {isEditMode ? 'Update your approval workflow rules and steps' : 'Define a new sequential approval process'}
+                    </p>
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="max-w-5xl mx-auto px-6 py-8">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8">
-                    {/* Basic Info */}
-                    <div className="space-y-6 mb-8">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Workflow Name *
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="e.g., Content Approval"
-                                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Description
-                            </label>
-                            <textarea
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="Describe this workflow..."
-                                rows={3}
-                                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.enabled}
-                                    onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-                                    className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                                />
-                                <span className="text-sm text-gray-700 dark:text-gray-300">
-                                    Enabled
-                                </span>
-                            </label>
-                        </div>
+            {/* Form Container */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-800 p-6 lg:p-8 shadow-sm">
+                {/* Basic Info */}
+                <div className="space-y-5 mb-8">
+                    <div>
+                        <label className="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1.5">
+                            Workflow Name *
+                        </label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            placeholder="e.g., Content Approval"
+                            className="w-full px-3.5 py-2 text-sm bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
+                        />
                     </div>
 
-                    {/* Workflow Steps */}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-8">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                                Workflow Steps
+                    <div>
+                        <label className="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1.5">
+                            Description
+                        </label>
+                        <textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            placeholder="Describe the scope of this workflow..."
+                            rows={3}
+                            className="w-full px-3.5 py-2 text-sm bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white resize-none"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={formData.enabled}
+                                onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
+                                className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 dark:bg-gray-900"
+                            />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Enabled for publishing checks
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                {/* Workflow Steps */}
+                <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                                Workflow Steps ({formData.steps.length})
                             </h2>
-                            <button
-                                onClick={handleAddStep}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add Step
-                            </button>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Stages must be approved in sequence from top to bottom
+                            </p>
                         </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAddStep}
+                        >
+                            <Plus className="w-3.5 h-3.5 mr-1" />
+                            Add Step
+                        </Button>
+                    </div>
 
-                        {formData.steps.length === 0 ? (
-                            <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
-                                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                                    No steps yet. Add your first step to get started.
-                                </p>
-                                <button
-                                    onClick={handleAddStep}
-                                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                    {formData.steps.length === 0 ? (
+                        <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                                No steps yet. Add your first step to get started.
+                            </p>
+                            <Button
+                                type="button"
+                                onClick={handleAddStep}
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add First Step
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {formData.steps.map((step, index) => (
+                                <div
+                                    key={index}
+                                    className="p-5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/30"
                                 >
-                                    <Plus className="w-5 h-5" />
-                                    Add First Step
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {formData.steps.map((step, index) => (
-                                    <div
-                                        key={index}
-                                        className="p-6 border-2 border-gray-200 dark:border-gray-700 rounded-xl"
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <div className="cursor-grab pt-2">
-                                                <GripVertical className="w-5 h-5 text-gray-400" />
+                                    <div className="flex items-start gap-3">
+                                        <div className="cursor-grab pt-2 text-gray-400">
+                                            <GripVertical className="w-4 h-4" />
+                                        </div>
+                                        <div className="flex-1 space-y-3">
+                                            {/* Step Header */}
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                                                    Step {index + 1}
+                                                </span>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    aria-label={`Remove step ${index + 1}`}
+                                                    onClick={() => handleRemoveStep(index)}
+                                                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
                                             </div>
-                                            <div className="flex-1 space-y-4">
-                                                {/* Step Number */}
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                                        Step {index + 1}
-                                                    </span>
-                                                    <button
-                                                        onClick={() => handleRemoveStep(index)}
-                                                        className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                    >
-                                                        <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                                                    </button>
-                                                </div>
 
-                                                {/* Step Name */}
+                                            {/* Step Name */}
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                                                    Step Name *
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={step.name}
+                                                    onChange={(e) => handleStepChange(index, 'name', e.target.value)}
+                                                    placeholder="e.g., Manager Review"
+                                                    className="w-full px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
+                                                />
+                                            </div>
+
+                                            {/* Step Description */}
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                                                    Description
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={step.description || ''}
+                                                    onChange={(e) => handleStepChange(index, 'description', e.target.value)}
+                                                    placeholder="Describe tasks for this step..."
+                                                    className="w-full px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
+                                                />
+                                            </div>
+
+                                            {/* Assigned To */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Step Name *
+                                                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                                                        Assigned To (Email / Role)
                                                     </label>
                                                     <input
                                                         type="text"
-                                                        value={step.name}
-                                                        onChange={(e) => handleStepChange(index, 'name', e.target.value)}
-                                                        placeholder="e.g., Manager Review"
-                                                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                                                    />
-                                                </div>
-
-                                                {/* Step Description */}
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Description
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={step.description || ''}
-                                                        onChange={(e) => handleStepChange(index, 'description', e.target.value)}
-                                                        placeholder="Describe this step..."
-                                                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                                                    />
-                                                </div>
-
-                                                {/* Assigned To */}
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                        Assigned To (Email)
-                                                    </label>
-                                                    <input
-                                                        type="email"
                                                         value={step.assignedTo || ''}
                                                         onChange={(e) => handleStepChange(index, 'assignedTo', e.target.value)}
-                                                        placeholder="user@example.com"
-                                                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                                        placeholder="e.g. editor@company.com"
+                                                        className="w-full px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
                                                     />
                                                 </div>
 
-                                                {/* Required Approvals */}
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
                                                         Required Approvals
                                                     </label>
                                                     <input
@@ -298,51 +310,55 @@ export function WorkflowBuilderPage() {
                                                         min="1"
                                                         value={step.requiredApprovals || 1}
                                                         onChange={(e) => handleStepChange(index, 'requiredApprovals', parseInt(e.target.value))}
-                                                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                                        className="w-full px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
                                                     />
                                                 </div>
+                                            </div>
 
-                                                {/* Auto Approve */}
-                                                <div>
-                                                    <label className="flex items-center gap-2 cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={step.autoApprove || false}
-                                                            onChange={(e) => handleStepChange(index, 'autoApprove', e.target.checked)}
-                                                            className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                                                        />
-                                                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                                                            Auto-approve this step
-                                                        </span>
-                                                    </label>
-                                                </div>
+                                            {/* Auto Approve */}
+                                            <div>
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={step.autoApprove || false}
+                                                        onChange={(e) => handleStepChange(index, 'autoApprove', e.target.checked)}
+                                                        className="w-3.5 h-3.5 text-indigo-600 rounded focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                                                        Auto-approve this step if no reviewers reject within 24h
+                                                    </span>
+                                                </label>
                                             </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center justify-between pt-8 border-t border-gray-200 dark:border-gray-700 mt-8">
-                        <button
-                            onClick={() => navigate(`/dashboard/project/${projectId}/workflows`)}
-                            className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <Save className="w-5 h-5" />
-                            {saving ? 'Saving...' : isEditMode ? 'Update Workflow' : 'Create Workflow'}
-                        </button>
-                    </div>
+                {/* Bottom Actions */}
+                <div className="flex items-center justify-between pt-6 border-t border-gray-100 dark:border-gray-800 mt-8">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => navigate(`/dashboard/project/${projectId}/workflows`)}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="shadow-sm"
+                    >
+                        <Save className="w-4 h-4 mr-2" />
+                        {saving ? 'Saving...' : isEditMode ? 'Update Workflow' : 'Create Workflow'}
+                    </Button>
                 </div>
             </div>
         </div>
     );
 }
+
+export default WorkflowBuilderPage;

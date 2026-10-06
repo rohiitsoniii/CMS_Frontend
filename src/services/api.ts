@@ -471,6 +471,8 @@ export const localeAPI = {
   saveApiKey: (apiKey: string) => api.put('/locales/api-key', { apiKey }),
   translateContent: (contentId: string) => api.post(`/locales/translate-content/${contentId}`),
   translateAll: () => api.post('/locales/translate-all'),
+  bulkTranslate: () => api.post('/locales/translate-all'),
+  setDefault: (code: string) => api.put(`/locales/${code}`, { isDefault: true }),
 };
 
 

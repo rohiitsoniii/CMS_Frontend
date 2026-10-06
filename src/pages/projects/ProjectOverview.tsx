@@ -18,7 +18,9 @@ import {
     Code2,
     Play,
     Loader2,
-    CheckCircle2
+    CheckCircle2,
+    Boxes,
+    Languages
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -146,6 +148,12 @@ console.log(data);`;
                             </a>
                         </Button>
                     )}
+                    <Button variant="outline" asChild>
+                        <Link to={`/dashboard/project/${project._id}/content-types`}>
+                            <Boxes className="w-4 h-4 mr-2 text-indigo-500" />
+                            Content Models
+                        </Link>
+                    </Button>
                     <Button variant="outline" asChild>
                         <Link to={`/dashboard/project/${project._id}/settings`}>
                             <Settings className="w-4 h-4 mr-2" />

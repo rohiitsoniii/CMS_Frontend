@@ -36,7 +36,7 @@ import { SupportPage } from '@/pages/support/SupportPage';
 import { OnboardingPage } from '@/pages/onboarding/OnboardingPage';
 import { EnvironmentPage } from '@/pages/settings/EnvironmentPage';
 import { DashboardLayout, SuperAdminLayout } from '@/components/layout';
-import { SystemDashboardPage, ErrorLogsPage, CouponManagementPage, ComingSoonPage } from '@/pages/system';
+import { SystemDashboardPage, ErrorLogsPage, CouponManagementPage, SystemHealthPage, TenantManagementPage, PlatformUsersPage, SystemSettingsPage, ComingSoonPage } from '@/pages/system';
 import { TrashPage } from '@/pages/trash/TrashPage';
 import { BackupPage } from '@/pages/backup/BackupPage';
 import { ImportExportPage } from '@/pages/import-export/ImportExportPage';
@@ -127,6 +127,7 @@ export default function App() {
                 {/* Global Settings */}
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="settings/environment" element={<EnvironmentPage />} />
+                <Route path="settings/environment" element={<EnvironmentPage />} />
                 <Route path="settings/mfa" element={<MFASetupPage />} />
                 <Route path="settings/sso" element={<SSOConfigPage />} />
                 <Route path="settings/security" element={<SecurityPage />} />
@@ -157,6 +158,8 @@ export default function App() {
                 <Route path="tenants" element={<ComingSoonPage title="Tenant Management" description="Multi-tenant cluster monitoring and tenant quota management is being prepared." />} />
                 <Route path="users" element={<ComingSoonPage title="Platform Users" description="Cross-tenant platform user oversight and global role management is being prepared." />} />
                 <Route path="audit" element={<AuditLogsPage />} />
+                <Route path="health" element={<ComingSoonPage title="Infrastructure Health" description="Real-time Redis, MongoDB cluster metrics, and queue worker health monitoring." />} />
+                <Route path="settings" element={<ComingSoonPage title="System Settings" description="Global platform configurations, SMTP gateways, rate limiting, and maintenance modes." />} />
             </Route>
 
 
@@ -308,6 +311,7 @@ export default function App() {
                 <Route path="email-templates" element={<EmailTemplatesPage />} />
                 <Route path="trash" element={<TrashPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="settings/environment" element={<EnvironmentPage />} />
                 <Route path="settings/mfa" element={<MFASetupPage />} />
                 <Route path="settings/sso" element={<SSOConfigPage />} />
                 <Route path="settings/security" element={<SecurityPage />} />
