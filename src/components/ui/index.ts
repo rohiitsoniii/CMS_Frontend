@@ -39,3 +39,4 @@ export * from './dropdown-menu';
 export * from './toast';
 export { Toaster } from './toaster';
 export { Skeleton } from './skeleton';
+export { ErrorBoundary } from './ErrorBoundary';

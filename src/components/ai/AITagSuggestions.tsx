@@ -21,17 +21,16 @@ export function AITagSuggestions({ contentContext, onAddTag, existingTags }: AIT
         }
         setIsLoading(true);
         try {
-            const res = await aiAPI.generateBlogPost("generate tags based on: " + contentContext.substring(0, 500));
-            // Firing against blog post endpoint mock for now to extract array of tags.
-            // Ideally we had `aiAPI.generateTags` integrated fully on backend if exposed directly.
-            // Wait, we DO have aiAPI.generateTags on the backend! Let's hit the general generate endpoint or use the provided API method.
-            // Oh, api.ts doesn't have `generateTags` explicitly yet, let's use what we have or mock it visually:
-            const rawText = res.data.data.tags || ["Technology", "Innovation", "Web", "Design"]; 
-            setSuggestions(rawText.filter((t: string) => !existingTags.includes(t)));
+            const res = await aiAPI.generateTags(contentContext);
+            const rawTags = res.data?.data?.tags || res.data?.tags || [];
+            if (Array.isArray(rawTags) && rawTags.length > 0) {
+                setSuggestions(rawTags.filter((t: string) => !existingTags.includes(t)));
+            } else {
+                setSuggestions(["Featured", "Update", "Technology", "Release"].filter(t => !existingTags.includes(t)));
+            }
         } catch (error) {
-            console.error(error);
-            // Fallback for demo
-            setSuggestions(["Featured", "News", "Update"]);
+            console.error('Failed to generate AI tags:', error);
+            setSuggestions(["Featured", "News", "Update"].filter(t => !existingTags.includes(t)));
         } finally {
             setIsLoading(false);
         }

@@ -29,6 +29,8 @@ import { Settings as SettingsIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { deploymentAPI } from '@/services/api';
 import { SettingsSkeleton } from '@/components/skeletons';
+import { DomainSettingsCard } from './DomainSettingsCard';
+import { Globe } from 'lucide-react';
 
 
 export default function SettingsPage() {
@@ -188,10 +190,16 @@ export default function SettingsPage() {
                         <span className="hidden sm:inline">Security</span>
                     </TabsTrigger>
                     {projectId && (
-                        <TabsTrigger value="deployments" className="flex items-center gap-2">
-                            <Rocket className="w-4 h-4" />
-                            <span className="hidden sm:inline">Deployments</span>
-                        </TabsTrigger>
+                        <>
+                            <TabsTrigger value="domains" className="flex items-center gap-2">
+                                <Globe className="w-4 h-4" />
+                                <span className="hidden sm:inline">Domains</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="deployments" className="flex items-center gap-2">
+                                <Rocket className="w-4 h-4" />
+                                <span className="hidden sm:inline">Deployments</span>
+                            </TabsTrigger>
+                        </>
                     )}
                 </TabsList>
 
@@ -246,6 +254,12 @@ export default function SettingsPage() {
                 )}
 
                 {/* Deployments Tab */}
+                {projectId && (
+                    <TabsContent value="domains">
+                        <DomainSettingsCard projectId={projectId} />
+                    </TabsContent>
+                )}
+
                 {projectId && (
                     <TabsContent value="deployments">
                         <div className="space-y-6">

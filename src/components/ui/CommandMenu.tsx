@@ -5,7 +5,8 @@ import {
   FolderKanban, Image, BarChart3, CreditCard, ScrollText, 
   Bot, Brain, GitBranch, Calendar, Mail, Globe, 
   Key, Webhook, KeyRound, Users, DatabaseBackup, 
-  Archive, Trash2, Sun, Moon, HelpCircle
+  Archive, Trash2, Sun, Moon, HelpCircle,
+  Activity, Building2, ShieldAlert
 } from 'lucide-react';
 
 interface CommandItem {
@@ -87,7 +88,18 @@ export function CommandMenu() {
         { label: 'Archive', icon: Archive, path: '/dashboard/archive' },
         { label: 'Trash Purge', icon: Trash2, path: '/dashboard/trash' },
         { label: 'Project Settings', icon: Settings, path: '/dashboard/settings' },
+        { label: 'Custom Domains', icon: Globe, path: '/dashboard/settings' },
         { label: 'Support & Help', icon: HelpCircle, path: '/dashboard/support' },
+      ]
+    },
+    {
+      group: 'Super Admin',
+      items: [
+        { label: 'System Infrastructure Health', icon: Activity, path: '/admin/system/health' },
+        { label: 'Tenant Organizations Directory', icon: Building2, path: '/admin/system/tenants' },
+        { label: 'Global Platform Users', icon: Users, path: '/admin/system/users' },
+        { label: 'Platform System Settings & SMTP', icon: Settings, path: '/admin/system/settings' },
+        { label: 'System Error Logs', icon: ShieldAlert, path: '/admin/system/errors' },
       ]
     },
     {

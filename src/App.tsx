@@ -35,12 +35,13 @@ import { PricingPage } from '@/pages/billing/PricingPage';
 import { SupportPage } from '@/pages/support/SupportPage';
 import { OnboardingPage } from '@/pages/onboarding/OnboardingPage';
 import { EnvironmentPage } from '@/pages/settings/EnvironmentPage';
-import { DashboardLayout, SuperAdminLayout } from '@/components/layout';
+import { DashboardLayout, SuperAdminLayout, OfflineBanner } from '@/components/layout';
 import { SystemDashboardPage, ErrorLogsPage, CouponManagementPage, SystemHealthPage, TenantManagementPage, PlatformUsersPage, SystemSettingsPage, ComingSoonPage } from '@/pages/system';
 import { TrashPage } from '@/pages/trash/TrashPage';
 import { BackupPage } from '@/pages/backup/BackupPage';
 import { ImportExportPage } from '@/pages/import-export/ImportExportPage';
 import { ArchivePage } from '@/pages/archive/ArchivePage';
+import { NotFoundPage } from '@/pages/public/NotFoundPage';
 import { ContentCalendar } from '@/pages/calendar/ContentCalendar';
 import { CommandMenu } from '@/components/ui/CommandMenu';
 import { Toaster } from '@/components/ui';
@@ -155,11 +156,11 @@ export default function App() {
                 <Route index element={<SystemDashboardPage />} />
                 <Route path="errors" element={<ErrorLogsPage />} />
                 <Route path="coupons" element={<CouponManagementPage />} />
-                <Route path="tenants" element={<ComingSoonPage title="Tenant Management" description="Multi-tenant cluster monitoring and tenant quota management is being prepared." />} />
-                <Route path="users" element={<ComingSoonPage title="Platform Users" description="Cross-tenant platform user oversight and global role management is being prepared." />} />
+                <Route path="tenants" element={<TenantManagementPage />} />
+                <Route path="users" element={<PlatformUsersPage />} />
                 <Route path="audit" element={<AuditLogsPage />} />
-                <Route path="health" element={<ComingSoonPage title="Infrastructure Health" description="Real-time Redis, MongoDB cluster metrics, and queue worker health monitoring." />} />
-                <Route path="settings" element={<ComingSoonPage title="System Settings" description="Global platform configurations, SMTP gateways, rate limiting, and maintenance modes." />} />
+                <Route path="health" element={<SystemHealthPage />} />
+                <Route path="settings" element={<SystemSettingsPage />} />
             </Route>
 
 
@@ -326,25 +327,10 @@ export default function App() {
             </Route>
 
             {/* 404 */}
-            <Route
-                path="*"
-                element={
-                    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-                        <div className="text-center">
-                            <h1 className="text-8xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent mb-4">404</h1>
-                            <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">Oops! Page not found</p>
-                            <a
-                                href="/dashboard"
-                                className="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:shadow-lg hover:-translate-y-0.5 transition-all"
-                            >
-                                Go to Dashboard
-                            </a>
-                        </div>
-                    </div>
-                }
-            />
+            <Route path="*" element={<NotFoundPage />} />
         </Routes>
             <Toaster />
+            <OfflineBanner />
         </>
     );
 }

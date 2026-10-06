@@ -1,8 +1,28 @@
+import { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import { Button } from '@/components/ui/button';
-import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Image as ImageIcon } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import {
+    Bold,
+    Italic,
+    Strikethrough,
+    Heading1,
+    Heading2,
+    List,
+    ListOrdered,
+    Image as ImageIcon,
+    ExternalLink,
+} from 'lucide-react';
 
 interface RichTextEditorProps {
     value: string;
@@ -10,6 +30,10 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
+    const [imageModalOpen, setImageModalOpen] = useState(false);
+    const [imageUrl, setImageUrl] = useState('');
+    const [imageAlt, setImageAlt] = useState('');
+
     const editor = useEditor({
         extensions: [
             StarterKit,
@@ -30,10 +54,12 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         return null;
     }
 
-    const addImage = () => {
-        const url = window.prompt('URL of the image:');
-        if (url) {
-            editor.chain().focus().setImage({ src: url }).run();
+    const handleInsertImage = () => {
+        if (imageUrl.trim()) {
+            editor.chain().focus().setImage({ src: imageUrl.trim(), alt: imageAlt.trim() || undefined }).run();
+            setImageUrl('');
+            setImageAlt('');
+            setImageModalOpen(false);
         }
     };
 
@@ -110,12 +136,75 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={addImage}
+                    onClick={() => setImageModalOpen(true)}
+                    title="Insert Image"
                 >
                     <ImageIcon className="w-4 h-4" />
                 </Button>
             </div>
+
             <EditorContent editor={editor} />
+
+            {/* Custom Image Insertion Dialog */}
+            <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ImageIcon className="w-5 h-5 text-indigo-500" />
+                            Insert Image
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="image-url">Image URL</Label>
+                            <Input
+                                id="image-url"
+                                placeholder="https://images.unsplash.com/photo-..."
+                                value={imageUrl}
+                                onChange={(e) => setImageUrl(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="image-alt">Alt Text (Optional)</Label>
+                            <Input
+                                id="image-alt"
+                                placeholder="Describe the image for accessibility"
+                                value={imageAlt}
+                                onChange={(e) => setImageAlt(e.target.value)}
+                            />
+                        </div>
+
+                        {imageUrl.trim() && (
+                            <div className="mt-2 border rounded-lg p-2 bg-slate-50 dark:bg-slate-900">
+                                <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                                    <ExternalLink className="w-3 h-3" /> Preview
+                                </p>
+                                <img
+                                    src={imageUrl}
+                                    alt="Preview"
+                                    className="max-h-32 rounded object-cover mx-auto"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setImageModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleInsertImage}
+                            disabled={!imageUrl.trim()}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                        >
+                            Insert Image
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

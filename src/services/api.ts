@@ -353,6 +353,10 @@ export const aiAPI = {
   generateBlogPost: (topic: string, keywords?: string[]) => api.post('/ai/generate/blog-post', { topic, keywords }),
   improveContent: (content: string) => api.post('/ai/improve', { content }),
   translate: (content: string, targetLanguage: string) => api.post('/ai/translate', { content, targetLanguage }),
+  generateTags: (content: string) => api.post('/ai/seo/tags', { content }),
+  generateMetaDescription: (content: string) => api.post('/ai/seo/meta-description', { content }),
+  generateSEOTitle: (content: string) => api.post('/ai/seo/title', { content }),
+  generateImageAltText: (imageUrl: string) => api.post('/ai/media/alt-text', { imageUrl }),
   getStatus: () => api.get('/ai/status'),
 };
 
@@ -565,9 +569,12 @@ export const envAPI = {
 // Domain API
 // ============================
 export const domainAPI = {
-  getAll: (projectId: string) => api.get(`/projects/${projectId}/domains`),
-  add: (projectId: string, domain: string) => api.post(`/projects/${projectId}/domains`, { domain }),
-  delete: (projectId: string, domainId: string) => api.delete(`/projects/${projectId}/domains/${domainId}`),
+  getAll: (projectId?: string) => projectId ? api.get(`/projects/${projectId}/domains`) : api.get('/domains'),
+  add: (domain: string, projectId?: string) => projectId ? api.post(`/projects/${projectId}/domains`, { domain }) : api.post('/domains', { domain }),
+  verify: (domainId: string, token?: string) => api.post(`/domains/${domainId}/verify`, { token }),
+  activate: (domainId: string) => api.post(`/domains/${domainId}/activate`),
+  setPrimary: (domainId: string) => api.post(`/domains/${domainId}/primary`),
+  delete: (domainId: string, projectId?: string) => projectId ? api.delete(`/projects/${projectId}/domains/${domainId}`) : api.delete(`/domains/${domainId}`),
 };
 
 // ============================
