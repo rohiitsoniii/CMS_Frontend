@@ -10,20 +10,36 @@ export class ApiError extends Error {
   }
 }
 
-// Create axios instance
+// Create axios instance — cookies carry the session (withCredentials);
+// the in-memory access token is only a fallback for in-band flows (MFA).
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add auth token
+/** Read the double-submit CSRF cookie set at login. */
+export const readCsrfToken = (): string | null => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.split('; ').find((c) => c.startsWith('csrf_token='));
+  return match ? decodeURIComponent(match.split('=')[1]) : null;
+};
+
+// Request interceptor: attach memory token (if any) + CSRF header on mutations
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const method = (config.method || 'get').toUpperCase();
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      const csrf = readCsrfToken();
+      if (csrf) {
+        config.headers['x-csrf-token'] = csrf;
+      }
     }
     return config;
   },
@@ -68,47 +84,44 @@ api.interceptors.response.use(
 
       originalRequest._retry = true;
       isRefreshing = true;
-      
-      const refreshToken = useAuthStore.getState().refreshToken;
-      
-      if (refreshToken) {
-        try {
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken,
-          });
-          
-          const tokens = response.data?.data?.tokens || response.data?.tokens;
-          const accessToken = tokens?.accessToken;
-          const newRefreshToken = tokens?.refreshToken;
-          
-          if (!accessToken) {
-            throw new Error('Refresh failed: invalid token payload');
-          }
 
-          const { user, tenant } = useAuthStore.getState();
-          if (user && tenant) {
-            useAuthStore.getState().setAuth(user, tenant, {
-              accessToken,
-              refreshToken: newRefreshToken || refreshToken,
-            });
-          }
-          
-          processQueue(null, accessToken);
-          isRefreshing = false;
+      // Session cookies (httpOnly) travel automatically; no body needed.
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
 
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          processQueue(refreshError, null);
-          isRefreshing = false;
-          useAuthStore.getState().logout();
-          window.location.href = '/login';
-          return Promise.reject(refreshError);
+        const tokens = response.data?.data?.tokens || response.data?.tokens;
+        const accessToken = tokens?.accessToken;
+
+        if (!accessToken) {
+          throw new Error('Refresh failed: invalid token payload');
         }
-      } else {
+
+        const { user, tenant } = useAuthStore.getState();
+        if (user && tenant) {
+          useAuthStore.getState().setAuth(user, tenant, { accessToken });
+        }
+
+        processQueue(null, accessToken);
         isRefreshing = false;
+
+        // Cookies were rotated server-side; drop any stale Bearer header
+        delete originalRequest.headers.Authorization;
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        try {
+          await axios.post(`${API_BASE_URL}/auth/logout`, {}, { withCredentials: true });
+        } catch {
+          // ignore — already unauthenticated
+        }
         useAuthStore.getState().logout();
         window.location.href = '/login';
+        return Promise.reject(refreshError);
       }
     }
     
@@ -121,7 +134,7 @@ api.interceptors.response.use(
           url: window.location.href,
           userAgent: navigator.userAgent,
           severity: 'high'
-        });
+        }, { withCredentials: true });
       } catch (logError) {
         // Silently ignore logging failures to prevent infinite error loops
       }
@@ -144,7 +157,7 @@ if (typeof window !== 'undefined') {
       colno: event.colno,
       url: window.location.href,
       severity: 'medium'
-    }).catch(() => {});
+    }, { withCredentials: true }).catch(() => {});
   });
 }
 
@@ -163,6 +176,14 @@ export const authAPI = {
   
   login: (data: { email: string; password: string }) => 
     api.post('/auth/login', data),
+
+  logout: () => api.post('/auth/logout'),
+
+  forgotPassword: (data: { email: string }) =>
+    api.post('/auth/forgot-password', data),
+
+  resetPassword: (data: { token: string; password: string }) =>
+    api.post('/auth/reset-password', data),
   
   getProfile: () => api.get('/auth/me'),
   
@@ -190,8 +211,17 @@ export const authAPI = {
 // ============================
 export const twoFactorAPI = {
   setup: () => api.post('/two-factor/setup'),
-  verify: (data: { token: string }) => api.post('/two-factor/verify', data),
-  disable: (data: { token: string }) => api.delete('/two-factor', { data }),
+  enable: (data: { token: string }) => api.post('/two-factor/enable', data),
+  // tempToken: pre-MFA access token from login (mfaVerified=false). It must
+  // ONLY be used for this verify call — never stored as a session.
+  verify: (data: { token: string }, tempToken?: string) =>
+    tempToken
+      ? api.post('/two-factor/verify', data, {
+          headers: { Authorization: `Bearer ${tempToken}` },
+        })
+      : api.post('/two-factor/verify', data),
+  disable: (data: { token: string }) => api.post('/two-factor/disable', data),
+  status: () => api.get('/two-factor/status'),
 };
 
 // ============================
@@ -200,6 +230,7 @@ export const twoFactorAPI = {
 export const ssoAPI = {
   getStatus: () => api.get('/sso/status'),
   getGoogleUrl: () => api.get('/sso/google/url'),
+  linkGoogle: (code: string) => api.post('/sso/google/link', { code }),
   unlinkGoogle: () => api.post('/sso/google/unlink'),
 };
 
@@ -311,10 +342,10 @@ export const contentAPI = {
     api.post(`/projects/${projectId}/content/${id}/unpublish`),
   
   getVersionHistory: (projectId: string, id: string) =>
-    api.get(`/projects/${projectId}/content/${id}/versions`),
+    api.get(`/content/${id}/versions`),
   
   restoreVersion: (projectId: string, id: string, version: number) =>
-    api.post(`/projects/${projectId}/content/${id}/versions/${version}/restore`),
+    api.post(`/content/${id}/versions/${version}/restore`),
   
   reorder: (projectId: string, type: string, order: { id: string; position: number }[]) =>
     api.put(`/projects/${projectId}/content/reorder`, { type, order }),
@@ -368,7 +399,15 @@ export const mediaAPI = {
   bulkMove: (fileIds: string[], targetFolder: string) => 
     api.post('/admin/media/bulk-move', { fileIds, targetFolder }),
   
-  getUrl: (id: string) => `${API_BASE_URL}/media/${id}`,
+  getUrl: (id: string, params?: { variant?: 'thumb' | 'small' | 'medium' | 'large'; w?: number; h?: number; fit?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.variant) qs.set('variant', params.variant);
+    if (params?.w) qs.set('w', String(params.w));
+    if (params?.h) qs.set('h', String(params.h));
+    if (params?.fit) qs.set('fit', params.fit);
+    const suffix = qs.toString();
+    return `${API_BASE_URL}/media/${id}${suffix ? `?${suffix}` : ''}`;
+  },
 };
 
 // ============================
@@ -403,10 +442,36 @@ export const aiAPI = {
 };
 
 // ============================
-// NLQ API
+// GDPR API
 // ============================
-export const nlqAPI = {
-  query: (projectId: string, query: string) => api.post('/nlq/query', { projectId, query }),
+export const gdprAPI = {
+  exportData: () => api.get('/gdpr/export'),
+  eraseAccount: (password: string) => api.post('/gdpr/erase', { password }),
+};
+
+/**
+ * Silent session restore on app boot: if persisted state says authenticated
+ * but the in-memory token is gone (page reload), rotate via cookies.
+ * Returns true when a session was restored.
+ */
+export const restoreSession = async (): Promise<boolean> => {
+  const { isAuthenticated, accessToken, setAuth, logout } = useAuthStore.getState();
+  if (!isAuthenticated || accessToken) return isAuthenticated;
+  try {
+    const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+    const tokens = res.data?.data?.tokens;
+    if (!tokens?.accessToken) throw new Error('No token');
+    const me = await axios.get(`${API_BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${tokens.accessToken}` },
+      withCredentials: true,
+    });
+    const { user, tenant } = me.data.data;
+    setAuth(user, tenant, tokens);
+    return true;
+  } catch {
+    logout();
+    return false;
+  }
 };
 
 // ============================
@@ -688,15 +753,28 @@ export const ragBotAPI = {
   regenerateKey: (projectId: string, botId: string) => 
     api.post(`/projects/${projectId}/rag-bots/${botId}/api-key`),
 
-  // Public Chat Endpoints
+  // Public Chat Endpoints — key travels in x-bot-key header, never the URL
   getPublicConfig: (botSlug: string, apiKey: string) =>
-    api.get(`/bots/${botSlug}/config`, { params: { apiKey } }),
+    api.get(`/bots/${botSlug}/config`, { headers: { 'x-bot-key': apiKey } }),
 
-  publicChat: (botSlug: string, data: { message: string; sessionId: string; apiKey?: string; history?: any[] }) =>
-    api.post(`/bots/${botSlug}/chat`, data),
+  publicChat: (botSlug: string, data: { message: string; sessionId: string; apiKey?: string; history?: any[] }) => {
+    const { apiKey, ...body } = data;
+    return api.post(`/bots/${botSlug}/chat`, body, {
+      headers: apiKey ? { 'x-bot-key': apiKey } : undefined,
+    });
+  },
 
   rateChat: (botSlug: string, data: { messageId: string; rating: number; feedback?: string }) =>
     api.post(`/bots/${botSlug}/rate`, data),
+};
+
+
+// ============================
+// NLQ (Natural Language Query) API
+// ============================
+export const nlqAPI = {
+  query: (projectId: string, query: string) =>
+    api.post('/nlq/query', { projectId, query }),
 };
 
 

@@ -210,7 +210,7 @@ export default function DashboardLayout() {
                 </header>
 
                 {/* Page content */}
-                <main className="p-4 lg:p-8">
+                <main id="main-content" className="p-4 lg:p-8">
                     <div className="mb-6">
                         <Breadcrumbs />
                     </div>

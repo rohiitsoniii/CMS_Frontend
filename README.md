@@ -25,7 +25,7 @@ npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+The app will be available at `http://localhost:5174`
 
 ---
 
@@ -188,7 +188,7 @@ All components use:
 
 ```bash
 # Development
-npm run dev          # Start dev server (http://localhost:5173)
+npm run dev          # Start dev server (http://localhost:5174)
 
 # Build
 npm run build        # Build for production
@@ -207,7 +207,7 @@ npm run lint         # Run ESLint
 Create a `.env` file in the frontend directory:
 
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:5000/api/v1
 ```
 
 ### API Base URL
@@ -215,7 +215,7 @@ VITE_API_URL=http://localhost:5000/api
 The API base URL is configured in each service file:
 
 ```typescript
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 ```
 
 ---

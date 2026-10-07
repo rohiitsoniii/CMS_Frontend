@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, Eye } from 'lucide-react';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 // Simple markdown to HTML converter (basic implementation)
 function markdownToHtml(markdown: string): string {
@@ -91,7 +92,7 @@ function MarkdownEditorField({
                 <TabsContent value="preview">
                     <div
                         className="prose max-w-none p-4 border rounded-lg min-h-[240px] bg-gray-50 dark:bg-gray-900"
-                        dangerouslySetInnerHTML={{ __html: markdownToHtml(markdown) }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(markdownToHtml(markdown)) }}
                     />
                 </TabsContent>
             </Tabs>

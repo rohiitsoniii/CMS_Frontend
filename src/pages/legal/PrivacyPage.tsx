@@ -1,29 +1,38 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Download, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { gdprAPI } from '@/services/api';
+import { useAuthStore } from '@/store';
 
 export const PrivacyPage: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [password, setPassword] = useState('');
+  const logout = useAuthStore((state) => state.logout);
 
   const requestExport = async () => {
     setLoading(true);
     setSuccess('');
     setError('');
     try {
-      const res = await fetch('/api/v1/privacy/export', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSuccess(data.message);
+      const res = await gdprAPI.exportData();
+      if (res.data?.success) {
+        const blob = new Blob([JSON.stringify(res.data.data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'my-data-export.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        setSuccess('Your data export has been downloaded.');
       } else {
-        setError('Failed to request export');
+        setError('Failed to export data');
       }
     } catch {
       setError('Network error. Please try again.');
@@ -33,22 +42,26 @@ export const PrivacyPage: React.FC = () => {
   };
 
   const requestDeletion = async () => {
+    if (!password) {
+      setError('Please enter your password to confirm deletion.');
+      return;
+    }
     setLoading(true);
     setSuccess('');
     setError('');
     try {
-      const res = await fetch('/api/v1/privacy/delete', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSuccess(data.message);
+      const res = await gdprAPI.eraseAccount(password);
+      if (res.data?.success) {
+        setShowDeleteConfirm(false);
+        setPassword('');
+        logout();
+        window.location.href = '/login';
       } else {
-        setError('Failed to trigger deletion');
+        setError('Failed to delete account');
       }
-    } catch {
-      setError('Network error. Please try again.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string; message?: string; blockers?: unknown } } };
+      setError(e.response?.data?.error || e.response?.data?.message || 'Failed to delete account');
     } finally {
       setLoading(false);
     }
@@ -126,13 +139,24 @@ export const PrivacyPage: React.FC = () => {
 
       <ConfirmDialog
         open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
+        onOpenChange={(open) => { setShowDeleteConfirm(open); if (!open) setPassword(''); }}
         title="Delete Account and Data"
-        description="Are you ABSOLUTELY sure? This will delete your entire account and all associated data within 30 days. This action cannot be undone."
+        description="Are you ABSOLUTELY sure? Your profile data will be destroyed and login disabled immediately. Enter your password to confirm."
         confirmText="Yes, Delete My Account"
         variant="destructive"
         onConfirm={requestDeletion}
-      />
+      >
+        <div className="space-y-2 pt-2">
+          <Label htmlFor="erase-password">Password</Label>
+          <Input
+            id="erase-password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+      </ConfirmDialog>
     </div>
   );
 };

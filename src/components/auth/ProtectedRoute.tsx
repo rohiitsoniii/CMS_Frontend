@@ -15,8 +15,8 @@ export default function ProtectedRoute({ children, requiredRole, redirectTo = '/
     }
 
     if (requiredRole === 'superAdmin') {
-        const role = user?.role?.toLowerCase();
-        const isSuperAdmin = role === 'superadmin' || role === 'super_admin' || role === 'owner';
+        const role = user?.role?.toLowerCase().replace(/[\s_-]/g, '');
+        const isSuperAdmin = role === 'superadmin';
         if (!isSuperAdmin) {
             return <Navigate to="/dashboard" replace />;
         }

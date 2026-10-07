@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { LoginPage, RegisterPage, MFASetupPage, SSOConfigPage, SecurityPage } from '@/pages/auth';
+import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage, MFASetupPage, SSOConfigPage, SecurityPage } from '@/pages/auth';
 import { AcceptInvitePage } from '@/pages/auth/AcceptInvitePage';
 import { ContentListPage, ContentEditorPage } from '@/pages/content';
 import { APIKeysPage } from '@/pages/apikeys';
@@ -49,6 +49,8 @@ import { Toaster } from '@/components/ui';
 
 import { ProtectedRoute } from '@/components/auth';
 import { useAuthStore } from '@/store';
+import { restoreSession } from '@/services/api';
+import { useEffect, useState } from 'react';
 
 // Auth redirect - redirects authenticated users away from auth pages
 function AuthRedirect({ children }: { children: React.ReactNode }) {
@@ -71,8 +73,26 @@ function ProjectAliasRedirect() {
 }
 
 export default function App() {
+    const [booted, setBooted] = useState(false);
+
+    useEffect(() => {
+        // Restore in-memory token from httpOnly cookies after reload.
+        // Blocks first render so guards don't flash-redirect to /login.
+        restoreSession().finally(() => setBooted(true));
+    }, []);
+
+    if (!booted) {
+        return null;
+    }
+
     return (
         <>
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-background focus:text-primary"
+            >
+                Skip to main content
+            </a>
             <CommandMenu />
             <Routes>
                 {/* Public widget route */}
@@ -98,6 +118,17 @@ export default function App() {
                     </AuthRedirect>
                 }
             />
+
+            <Route
+                path="/forgot-password"
+                element={
+                    <AuthRedirect>
+                        <ForgotPasswordPage />
+                    </AuthRedirect>
+                }
+            />
+
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* Onboarding */}
             <Route

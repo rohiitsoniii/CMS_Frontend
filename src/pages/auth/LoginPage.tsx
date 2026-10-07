@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { authAPI } from '@/services/api';
+import { authAPI, api } from '@/services/api';
+import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
 import { useAuthStore } from '@/store';
 
 const loginSchema = z.object({
@@ -21,6 +22,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
+    const [mfaTempToken, setMfaTempToken] = useState<string | null>(null);
     const navigate = useNavigate();
     const setAuth = useAuthStore((state) => state.setAuth);
 
@@ -36,12 +38,41 @@ export default function LoginPage() {
         try {
             setError('');
             const response = await authAPI.login(data);
-            const { user, tenant, tokens } = response.data.data;
+            const payload = response.data.data;
+            // MFA required: hold the pre-MFA temp token ONLY for the verify
+            // call — do NOT store it as a session. Open the challenge modal.
+            if (payload?.mfaRequired) {
+                const tempToken: string | undefined = payload?.tokens?.accessToken;
+                if (!tempToken) {
+                    setError('MFA required but no challenge token was issued.');
+                    return;
+                }
+                setMfaTempToken(tempToken);
+                return;
+            }
+            const { user, tenant, tokens } = payload;
             setAuth(user, tenant, tokens);
             navigate('/dashboard');
         } catch (err: unknown) {
             const error = err as { response?: { data?: { error?: string } } };
             setError(error.response?.data?.error || 'Login failed. Please try again.');
+        }
+    };
+
+    const handleMfaSuccess = async (verifiedTokens: { accessToken: string; refreshToken: string }) => {
+        try {
+            setError('');
+            // Fetch the full profile with the MFA-verified token, then establish the session.
+            const profileRes = await api.get('/auth/me', {
+                headers: { Authorization: `Bearer ${verifiedTokens.accessToken}` },
+            });
+            const { user, tenant } = profileRes.data.data;
+            setMfaTempToken(null);
+            setAuth(user, tenant, verifiedTokens);
+            navigate('/dashboard');
+        } catch {
+            setError('MFA verified but failed to load your profile. Please sign in again.');
+            setMfaTempToken(null);
         }
     };
 
@@ -96,7 +127,8 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                                 >
                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -108,7 +140,11 @@ export default function LoginPage() {
 
                         <div className="flex items-center justify-between text-sm">
                             <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="rounded border-gray-300" />
+                                <input
+                                    type="checkbox"
+                                    id="remember-me"
+                                    className="rounded border-gray-300 focus-visible:ring-2 focus-visible:ring-indigo-500"
+                                />
                                 <span className="text-gray-600 dark:text-gray-400">Remember me</span>
                             </label>
                             <Link to="/forgot-password" className="text-indigo-600 hover:text-indigo-500">
@@ -143,6 +179,13 @@ export default function LoginPage() {
                     </p>
                 </CardFooter>
             </Card>
+            {mfaTempToken && (
+                <MFAChallengeModal
+                    tempToken={mfaTempToken}
+                    onSuccess={handleMfaSuccess}
+                    onCancel={() => setMfaTempToken(null)}
+                />
+            )}
         </div>
     );
 }

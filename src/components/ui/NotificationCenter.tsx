@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationAPI } from '@/services/api';
 import { Bell, Loader2, Workflow, AlertCircle, Info, MessageSquare, PartyPopper } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import { useAuthStore } from '@/store';
 import { toast } from 'react-hot-toast';
 import { useEffect, useRef } from 'react';
 import {
@@ -31,10 +32,11 @@ export function NotificationCenter() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = useAuthStore.getState().accessToken;
     if (!token) return;
 
-    const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/v1\/?$/, '');
+    const socket = io(socketUrl, {
       path: '/socket.io',
       auth: { token },
       transports: ['websocket', 'polling'],

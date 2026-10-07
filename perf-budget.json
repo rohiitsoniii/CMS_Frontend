@@ -1,0 +1,5 @@
+{
+    "totalJsGzipKB": 700,
+    "totalCssGzipKB": 30,
+    "notes": "Bump deliberately: lower only with a plan (code-split or dep removal). CI fails the build when exceeded."
+}

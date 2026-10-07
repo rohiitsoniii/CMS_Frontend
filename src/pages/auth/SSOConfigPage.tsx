@@ -1,5 +1,6 @@
 ﻿import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
+import { ssoAPI } from '@/services/api';
 
 export const SSOConfigPage: React.FC = () => {
   const [ssoStatus, setSsoStatus] = useState<any>({ google: false });
@@ -7,13 +8,9 @@ export const SSOConfigPage: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/v1/sso/status', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-      .then(res => res.json())
-      .then(data => {
+    ssoAPI.getStatus()
+      .then((res) => {
+        const data = res.data;
         if (data.success) {
           setSsoStatus(data.data);
         } else {
@@ -26,8 +23,8 @@ export const SSOConfigPage: React.FC = () => {
 
   const handleLinkGoogle = async () => {
     try {
-      const res = await fetch('/api/v1/sso/google/url');
-      const data = await res.json();
+      const res = await ssoAPI.getGoogleUrl();
+      const data = res.data;
       if (data.success) {
         window.location.href = data.data.url; // Redirect to google auth
       }
@@ -38,13 +35,8 @@ export const SSOConfigPage: React.FC = () => {
 
   const handleUnlinkGoogle = async () => {
     try {
-      const res = await fetch('/api/v1/sso/google/unlink', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await res.json();
+      const res = await ssoAPI.unlinkGoogle();
+      const data = res.data;
       if (data.success) {
         setSsoStatus((prev: any) => ({ ...prev, googleLinked: false }));
         toast.success('Google account unlinked successfully');

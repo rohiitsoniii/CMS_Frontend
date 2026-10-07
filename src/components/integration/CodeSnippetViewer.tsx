@@ -78,9 +78,9 @@ export function ContentComponent() {
 
   return (
     <div className="content">
-      {/* Dynamic Content Rendering */}
+      {/* Dynamic Content Rendering — textContent keeps CMS data XSS-safe */}
       <h1>{data.name}</h1>
-      <div dangerouslySetInnerHTML={{ __html: data.data.body }} />
+      <div>{data.data.body}</div>
     </div>
   );
 }`;
@@ -137,14 +137,18 @@ export default async function Page() {
       const json = await response.json();
       const content = json.data;
       
-      // Update DOM to make it dynamic!
+      // Update DOM to make it dynamic! (textContent — never innerHTML
+      // with CMS data, or stored XSS can execute here.)
+      const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
       container.innerHTML = \`
-        <h1>\${content.name}</h1>
-        <div>\${content.data.body || JSON.stringify(content.data)}</div>
+        <h1>\${escapeHtml(content.name)}</h1>
+        <div>\${escapeHtml(content.data.body || JSON.stringify(content.data))}</div>
       \`;
       
     } catch (error) {
-      container.innerHTML = 'Error loading content';
+      container.textContent = 'Error loading content';
       console.error(error);
     }
   }

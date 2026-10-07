@@ -19,6 +19,7 @@ interface ConfirmDialogProps {
     cancelText?: string;
     variant?: 'destructive' | 'default';
     onConfirm: () => void | Promise<void>;
+    children?: React.ReactNode;
 }
 
 export function ConfirmDialog({
@@ -30,6 +31,7 @@ export function ConfirmDialog({
     cancelText = 'Cancel',
     variant = 'destructive',
     onConfirm,
+    children,
 }: ConfirmDialogProps) {
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -38,6 +40,7 @@ export function ConfirmDialog({
                     <AlertDialogTitle>{title}</AlertDialogTitle>
                     <AlertDialogDescription>{description}</AlertDialogDescription>
                 </AlertDialogHeader>
+                {children}
                 <AlertDialogFooter>
                     <AlertDialogCancel>{cancelText}</AlertDialogCancel>
                     <AlertDialogAction

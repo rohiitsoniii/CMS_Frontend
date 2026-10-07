@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface SearchResult {
     id: string;
@@ -132,7 +133,7 @@ export function AdvancedSearch() {
 
     const highlightText = (text: string[] | undefined) => {
         if (!text || text.length === 0) return null;
-        return <span dangerouslySetInnerHTML={{ __html: text[0] }} />;
+        return <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(text[0]) }} />;
     };
 
     return (

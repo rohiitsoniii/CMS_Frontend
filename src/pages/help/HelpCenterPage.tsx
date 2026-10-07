@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Book, MessageCircle, Mail, ChevronRight, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { api } from '@/services/api';
 import toast from 'react-hot-toast';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface Category {
   _id: string;
@@ -269,7 +270,7 @@ export function HelpCenterPage() {
             <CardContent>
               <div
                 className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: selectedArticle.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedArticle.content) }}
               />
               
               <div className="mt-8 pt-6 border-t">

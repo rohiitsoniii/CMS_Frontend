@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { twoFactorAPI } from '@/services/api';
 
 export const MFASetupPage: React.FC = () => {
   const [setupData, setSetupData] = useState<any>(null);
@@ -7,46 +8,36 @@ export const MFASetupPage: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Ideally, use a custom hook for fetching authenticated routes
   useEffect(() => {
-    fetch('/api/v1/2fa/setup', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(res => res.json())
-    .then(data => {
+    twoFactorAPI.setup()
+    .then(res => {
+      const data = res.data;
       if (data.success) {
         setSetupData(data.data);
       } else {
         setError(data.error || 'Failed to initialize 2FA setup');
       }
     })
-    .catch(() => setError('Network error initializing 2FA'))
+    .catch((err: unknown) => {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error.response?.data?.error || 'Network error initializing 2FA');
+    })
     .finally(() => setLoading(false));
   }, []);
 
   const handleVerify = async () => {
     setError('');
     try {
-      const res = await fetch('/api/v1/2fa/enable', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ token })
-      });
-      const data = await res.json();
+      const res = await twoFactorAPI.enable({ token });
+      const data = res.data;
       if (data.success) {
         setSuccess(true);
       } else {
         setError(data.error || 'Invalid code');
       }
-    } catch {
-      setError('Network error verifying code');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error.response?.data?.error || 'Network error verifying code');
     }
   };
 
