@@ -439,6 +439,8 @@ export const aiAPI = {
   generateSEOTitle: (content: string) => api.post('/ai/seo/title', { content }),
   generateImageAltText: (imageUrl: string) => api.post('/ai/media/alt-text', { imageUrl }),
   getStatus: () => api.get('/ai/status'),
+  generateEmail: (topic: string, type: 'newsletter' | 'welcome' | 'promo' = 'newsletter', context?: string) =>
+    api.post('/ai/generate/email', { topic, type, context }),
 };
 
 // ============================
@@ -744,8 +746,11 @@ export const ragBotAPI = {
     api.delete(`/projects/${projectId}/rag-bots/${botId}/sources`, { params: { type, hash } }),
   
   // Analytics & Deployment
-  getAnalytics: (projectId: string, botId: string) => 
-    api.get(`/projects/${projectId}/rag-bots/${botId}/analytics`),
+  getAnalytics: (projectId: string, botId: string, days = 7) =>
+    api.get(`/projects/${projectId}/rag-bots/${botId}/analytics`, { params: { days } }),
+
+  getUnanswered: (projectId: string, botId: string, days = 30) =>
+    api.get(`/projects/${projectId}/rag-bots/${botId}/unanswered`, { params: { days } }),
   
   getEmbedCode: (projectId: string, botId: string) => 
     api.get(`/projects/${projectId}/rag-bots/${botId}/embed-code`),
@@ -766,6 +771,9 @@ export const ragBotAPI = {
 
   rateChat: (botSlug: string, data: { messageId: string; rating: number; feedback?: string }) =>
     api.post(`/bots/${botSlug}/rate`, data),
+
+  submitLead: (botSlug: string, apiKey: string, data: { email: string; name?: string; sessionId: string }) =>
+    api.post(`/bots/${botSlug}/lead`, data, { headers: { 'x-bot-key': apiKey } }),
 };
 
 

@@ -1,275 +1,156 @@
-import toast from 'react-hot-toast';
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Eye, Mail, Copy } from 'lucide-react';
-import { emailTemplateService, EmailTemplate } from '@/services/emailTemplateService';
-import { EmailTemplatesSkeleton } from '@/components/skeletons';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { FileText, Plus, Pencil, Trash2, Send, Loader2 } from 'lucide-react';
+import {
+    Button, Input, Label, Textarea, Card, CardContent, Badge,
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+    Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from '@/components/ui';
+import { useToast } from '@/hooks/use-toast';
+import { emailAPI, EmailTemplate, errorMessage } from '@/services/emailMarketingService';
+
+const STARTER_BODY = `<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;color:#111827">
+  <h1 style="font-size:24px">Hi {{first_name|there}},</h1>
+  <p>Write your message here.</p>
+  <p><a href="https://example.com" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;border-radius:6px;text-decoration:none">Call to action</a></p>
+</div>`;
 
 export function EmailTemplatesPage() {
-    const { projectId } = useParams<{ projectId: string }>();
-    const navigate = useNavigate();
+    const { projectId } = useParams();
+    const { toast } = useToast();
     const [templates, setTemplates] = useState<EmailTemplate[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'all' | 'transactional' | 'marketing' | 'support'>('all');
-    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [editing, setEditing] = useState<Partial<EmailTemplate> | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [testTo, setTestTo] = useState('');
 
-    useEffect(() => {
-        loadTemplates();
-    }, [projectId]);
-
-    const loadTemplates = async () => {
-        if (!projectId) return;
-
+    const load = async () => {
         try {
             setLoading(true);
-            const data = await emailTemplateService.getTemplates(projectId);
-            setTemplates(data);
-        } catch (error) {
-            console.error('Failed to load templates:', error);
-            toast.error('Failed to load email templates');
+            setTemplates((await emailAPI.listTemplates(projectId!)).data.data);
+        } catch (err) {
+            toast({ title: 'Could not load templates', description: errorMessage(err), variant: 'destructive' });
         } finally {
             setLoading(false);
         }
     };
+    useEffect(() => { load(); }, [projectId]);
 
-    const handleDelete = async (id: string) => {
+    const save = async () => {
+        if (!editing) return;
         try {
-            await emailTemplateService.deleteTemplate(id);
-            setTemplates(templates.filter(t => t._id !== id));
-            toast.success('Template deleted successfully');
-        } catch (error) {
-            console.error('Failed to delete template:', error);
-            toast.error('Failed to delete template');
+            setSaving(true);
+            const data = { name: editing.name, subject: editing.subject, body: editing.body, category: editing.category, isActive: editing.isActive ?? true };
+            if (editing._id) await emailAPI.updateTemplate(projectId!, editing._id, data);
+            else await emailAPI.createTemplate(projectId!, data);
+            toast({ title: 'Template saved' });
+            setEditing(null);
+            load();
+        } catch (err) {
+            toast({ title: 'Could not save template', description: errorMessage(err), variant: 'destructive' });
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleDuplicate = async (template: EmailTemplate) => {
+    const sendTest = async () => {
+        if (!editing?._id || !testTo) return;
         try {
-            const newTemplate = await emailTemplateService.createTemplate({
-                ...template,
-                name: `${template.name} (Copy)`,
-                projectId: projectId!,
-            });
-            setTemplates([newTemplate, ...templates]);
-            toast.success('Template duplicated');
-        } catch (error) {
-            console.error('Failed to duplicate template:', error);
-            toast.error('Failed to duplicate template');
+            await emailAPI.testTemplate(projectId!, editing._id, testTo);
+            toast({ title: `Test sent to ${testTo}` });
+        } catch (err) {
+            toast({ title: 'Test failed', description: errorMessage(err), variant: 'destructive' });
         }
     };
-
-    const getCategoryBadgeClass = (category: string) => {
-        switch (category) {
-            case 'transactional':
-                return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20';
-            case 'marketing':
-                return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20';
-            case 'support':
-                return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
-            default:
-                return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-500/20';
-        }
-    };
-
-    const filteredTemplates = templates.filter(t => {
-        if (filter === 'all') return true;
-        return t.category === filter;
-    });
-
-    if (loading) {
-        return <EmailTemplatesSkeleton />;
-    }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2.5">
-                        <Mail className="w-7 h-7 text-indigo-500" />
-                        Email Templates
-                    </h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                        Create, customize, and manage transactional and marketing email templates
-                    </p>
+                    <h1 className="text-3xl font-bold dark:text-white">Email templates</h1>
+                    <p className="text-gray-500 mt-1">Reusable designs for campaigns and automated emails. Use merge tags like <code>{'{{first_name}}'}</code>.</p>
                 </div>
-                <Button
-                    onClick={() => navigate(`/dashboard/project/${projectId}/email-templates/new`)}
-                    className="shadow-sm"
-                >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Template
+                <Button onClick={() => setEditing({ name: '', subject: '', body: STARTER_BODY, category: 'marketing', isActive: true })}>
+                    <Plus className="w-4 h-4 mr-2" />New template
                 </Button>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                {(['all', 'transactional', 'marketing', 'support'] as const).map((cat) => (
-                    <button
-                        key={cat}
-                        onClick={() => setFilter(cat)}
-                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer ${
-                            filter === cat
-                                ? 'bg-indigo-600 text-white shadow-sm'
-                                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/60 border border-gray-200/80 dark:border-gray-800'
-                        }`}
-                    >
-                        {cat} {cat === 'all' ? `(${templates.length})` : ''}
-                    </button>
-                ))}
-            </div>
-
-            {/* Templates Grid */}
-            {filteredTemplates.length === 0 ? (
-                <div className="text-center py-14 bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-8">
-                    <Mail className="w-14 h-14 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                        No email templates found
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
-                        {filter === 'all'
-                            ? 'Get started by creating your first transactional or marketing email template.'
-                            : `No templates categorized under "${filter}".`
-                        }
-                    </p>
-                    <Button
-                        onClick={() => navigate(`/dashboard/project/${projectId}/email-templates/new`)}
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create First Template
-                    </Button>
-                </div>
+            {loading ? (
+                <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+            ) : templates.length === 0 ? (
+                <Card><CardContent className="py-16 text-center text-gray-500">
+                    <FileText className="w-8 h-8 mx-auto mb-3 text-gray-300" />No templates yet.
+                </CardContent></Card>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {filteredTemplates.map((template) => (
-                        <div
-                            key={template._id}
-                            className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-800 p-5 hover:shadow-lg transition-all flex flex-col justify-between"
-                        >
-                            <div>
-                                {/* Header */}
-                                <div className="flex items-start justify-between gap-2 mb-3">
-                                    <div className="min-w-0 flex-1">
-                                        <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                                            {template.name}
-                                        </h3>
-                                        <div className="mt-1">
-                                            <Badge
-                                                variant="outline"
-                                                className={`text-[10px] px-2 py-0 font-normal uppercase ${getCategoryBadgeClass(template.category)}`}
-                                            >
-                                                {template.category}
-                                            </Badge>
-                                        </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {templates.map((t) => (
+                        <Card key={t._id} className="overflow-hidden">
+                            <iframe title={`${t.name} preview`} sandbox="" srcDoc={t.body} className="w-full h-40 border-b bg-white pointer-events-none" />
+                            <CardContent className="p-4 space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <p className="font-semibold truncate dark:text-white">{t.name}</p>
+                                        <p className="text-xs text-gray-500 truncate">{t.subject}</p>
                                     </div>
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            aria-label="Preview template"
-                                            onClick={() => navigate(`/dashboard/project/${projectId}/email-templates/${template._id}/preview`)}
-                                            className="h-8 w-8 hover:text-blue-600 dark:hover:text-blue-400"
-                                        >
-                                            <Eye className="w-3.5 h-3.5" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            aria-label="Edit template"
-                                            onClick={() => navigate(`/dashboard/project/${projectId}/email-templates/${template._id}/edit`)}
-                                            className="h-8 w-8 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                        >
-                                            <Edit className="w-3.5 h-3.5" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            aria-label="Duplicate template"
-                                            onClick={() => handleDuplicate(template)}
-                                            className="h-8 w-8 hover:text-emerald-600 dark:hover:text-emerald-400"
-                                        >
-                                            <Copy className="w-3.5 h-3.5" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            aria-label="Delete template"
-                                            onClick={() => setDeleteTargetId(template._id!)}
-                                            className="h-8 w-8 hover:text-red-600 dark:hover:text-red-400"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </Button>
-                                    </div>
+                                    <Badge variant="secondary">{t.category}</Badge>
                                 </div>
-
-                                {/* Subject */}
-                                <div className="mb-3">
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Subject line:</p>
-                                    <p className="text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2">
-                                        {template.subject}
-                                    </p>
+                                <div className="flex gap-1">
+                                    <Button size="sm" variant="outline" onClick={() => setEditing(t)}><Pencil className="w-3.5 h-3.5 mr-1" />Edit</Button>
+                                    <Button size="sm" variant="ghost" aria-label={`Delete ${t.name}`} onClick={async () => {
+                                        if (!confirm(`Delete "${t.name}"?`)) return;
+                                        await emailAPI.deleteTemplate(projectId!, t._id).catch((e) => toast({ title: errorMessage(e), variant: 'destructive' }));
+                                        load();
+                                    }}><Trash2 className="w-3.5 h-3.5" /></Button>
                                 </div>
-
-                                {/* Variables */}
-                                {template.variables && template.variables.length > 0 && (
-                                    <div className="mb-4">
-                                        <div className="flex flex-wrap gap-1">
-                                            {template.variables.slice(0, 3).map((variable, index) => (
-                                                <span
-                                                    key={index}
-                                                    className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-900/60 text-gray-600 dark:text-gray-400 rounded text-[10px] font-mono border border-gray-200/50 dark:border-gray-800"
-                                                >
-                                                    {`{{${variable}}}`}
-                                                </span>
-                                            ))}
-                                            {template.variables.length > 3 && (
-                                                <span className="text-[10px] text-gray-400 dark:text-gray-500 self-center">
-                                                    +{template.variables.length - 3}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Status & Date */}
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800/80">
-                                <Badge
-                                    variant={template.isActive ? 'default' : 'secondary'}
-                                    className={`text-[10px] px-1.5 py-0 font-normal ${
-                                        template.isActive
-                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                            : ''
-                                    }`}
-                                >
-                                    {template.isActive ? 'Active' : 'Draft'}
-                                </Badge>
-                                <span className="text-xs text-gray-400 dark:text-gray-500">
-                                    {new Date(template.createdAt!).toLocaleDateString()}
-                                </span>
-                            </div>
-                        </div>
+                            </CardContent>
+                        </Card>
                     ))}
                 </div>
             )}
 
-            {/* Confirm Dialog */}
-            <ConfirmDialog
-                open={!!deleteTargetId}
-                onOpenChange={(open) => !open && setDeleteTargetId(null)}
-                title="Delete email template?"
-                description="This will permanently delete this template. Any automated delivery hooks relying on this template key will fail. This action cannot be undone."
-                confirmText="Delete Template"
-                onConfirm={() => {
-                    if (deleteTargetId) {
-                        handleDelete(deleteTargetId);
-                        setDeleteTargetId(null);
-                    }
-                }}
-            />
+            <Dialog open={Boolean(editing)} onOpenChange={(v) => !v && setEditing(null)}>
+                {editing && (
+                    <DialogContent className="max-w-5xl">
+                        <DialogHeader>
+                            <DialogTitle>{editing._id ? 'Edit template' : 'New template'}</DialogTitle>
+                            <DialogDescription>Merge tags: {'{{first_name}}'}, {'{{name}}'}, {'{{email}}'}, {'{{custom.field}}'}, {'{{unsubscribe_url}}'}</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid sm:grid-cols-3 gap-3">
+                            <div className="space-y-1.5"><Label htmlFor="t-name">Name</Label><Input id="t-name" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
+                            <div className="space-y-1.5"><Label htmlFor="t-subject">Subject</Label><Input id="t-subject" value={editing.subject} onChange={(e) => setEditing({ ...editing, subject: e.target.value })} /></div>
+                            <div className="space-y-1.5">
+                                <Label>Category</Label>
+                                <Select value={editing.category} onValueChange={(v) => setEditing({ ...editing, category: v as EmailTemplate['category'] })}>
+                                    <SelectTrigger aria-label="Category"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="marketing">Marketing</SelectItem>
+                                        <SelectItem value="transactional">Transactional</SelectItem>
+                                        <SelectItem value="support">Support</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid lg:grid-cols-2 gap-3">
+                            <Textarea rows={18} className="font-mono text-xs" value={editing.body} onChange={(e) => setEditing({ ...editing, body: e.target.value })} aria-label="Template HTML" />
+                            <iframe title="Template preview" sandbox="" srcDoc={editing.body} className="w-full h-full min-h-[360px] rounded-md border bg-white" />
+                        </div>
+                        <DialogFooter className="flex-wrap gap-2 sm:justify-between">
+                            {editing._id ? (
+                                <div className="flex gap-2">
+                                    <Input className="w-56" type="email" placeholder="you@example.com" value={testTo} onChange={(e) => setTestTo(e.target.value)} aria-label="Test address" />
+                                    <Button variant="outline" onClick={sendTest} disabled={!testTo}><Send className="w-4 h-4 mr-2" />Test</Button>
+                                </div>
+                            ) : <span />}
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+                                <Button onClick={save} disabled={saving || !editing.name || !editing.subject || !editing.body}>
+                                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save
+                                </Button>
+                            </div>
+                        </DialogFooter>
+                    </DialogContent>
+                )}
+            </Dialog>
         </div>
     );
 }

@@ -14,6 +14,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { seoAPI } from '@/services/api';
+import { seoSuiteAPI } from '@/services/growthService';
+import { errorMessage } from '@/services/emailMarketingService';
 import { KeywordTrackerSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +32,22 @@ export default function KeywordTrackerPage() {
     const [loading, setLoading] = useState(true);
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+    const [checking, setChecking] = useState(false);
     const { toast } = useToast();
+
+    const checkRankings = async () => {
+        try {
+            setChecking(true);
+            const res = await seoSuiteAPI.checkRanks(projectId!);
+            const found = res.data.data.filter((r: any) => r.rank > 0).length;
+            toast({ title: 'Rankings updated', description: `${found} of ${res.data.data.length} keywords rank in Google's top 100.` });
+            fetchKeywords();
+        } catch (error) {
+            toast({ title: 'Could not check rankings', description: errorMessage(error), variant: 'destructive' });
+        } finally {
+            setChecking(false);
+        }
+    };
 
     useEffect(() => {
         fetchKeywords();
@@ -114,6 +131,10 @@ export default function KeywordTrackerPage() {
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         Track
+                    </Button>
+                    <Button variant="outline" className="rounded-full" onClick={checkRankings} disabled={checking || keywords.length === 0}>
+                        {checking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <BarChart2 className="w-4 h-4 mr-2" />}
+                        Check rankings
                     </Button>
                 </div>
             </div>

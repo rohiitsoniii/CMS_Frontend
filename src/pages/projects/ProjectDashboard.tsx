@@ -43,7 +43,12 @@ import {
     Activity,
     Clock,
     Boxes,
-    Languages
+    Languages,
+    Send,
+    Filter,
+    Gauge,
+    ArrowRightLeft,
+    Settings2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -212,6 +217,10 @@ export default function ProjectDashboard() {
                 { label: 'Sitemap', icon: Globe, href: `/dashboard/project/${projectId}/seo/sitemap` },
                 { label: 'Robots.txt', icon: FileCode, href: `/dashboard/project/${projectId}/seo/robots` },
                 { label: 'Schema Builder', icon: Sparkles, href: `/dashboard/project/${projectId}/seo/schema` },
+                { label: 'AI Search (GEO)', icon: Bot, href: `/dashboard/project/${projectId}/seo/geo` },
+                { label: 'Redirects & 404s', icon: ArrowRightLeft, href: `/dashboard/project/${projectId}/seo/redirects` },
+                { label: 'Page Speed', icon: Gauge, href: `/dashboard/project/${projectId}/seo/pagespeed` },
+                { label: 'SEO Settings', icon: Settings2, href: `/dashboard/project/${projectId}/seo/settings` },
             ],
         },
         {
@@ -248,9 +257,16 @@ export default function ProjectDashboard() {
             href: `/dashboard/project/${projectId}/workflows`,
         },
         {
-            label: 'Templates',
+            label: 'Email Marketing',
             icon: Mail,
-            href: `/dashboard/project/${projectId}/email-templates`,
+            href: '#email',
+            children: [
+                { label: 'Campaigns', icon: Send, href: `/dashboard/project/${projectId}/email/campaigns` },
+                { label: 'Audience', icon: Users, href: `/dashboard/project/${projectId}/email/audience` },
+                { label: 'Segments', icon: Filter, href: `/dashboard/project/${projectId}/email/segments` },
+                { label: 'Templates', icon: FileCode, href: `/dashboard/project/${projectId}/email-templates` },
+                { label: 'Email Settings', icon: Cog, href: `/dashboard/project/${projectId}/email/settings` },
+            ],
         },
         {
             label: 'Data Management',
@@ -271,6 +287,7 @@ export default function ProjectDashboard() {
                 { label: 'General', icon: Settings, href: `/dashboard/project/${projectId}/settings` },
                 { label: 'Environment', icon: KeyRound, href: `/dashboard/project/${projectId}/settings/environment` },
                 { label: 'Security & MFA', icon: Shield, href: `/dashboard/project/${projectId}/settings/security` },
+                { label: 'AI (Bring your own key)', icon: Sparkles, href: `/dashboard/project/${projectId}/settings/ai` },
             ],
         },
     ];

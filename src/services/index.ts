@@ -1,7 +1,6 @@
 export * from './api';
 export * from './contentService';
 export * from './contentTypeService';
-export * from './emailTemplateService';
 export * from './localeService';
 export * from './roleService';
 export * from './scheduleService';

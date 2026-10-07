@@ -39,43 +39,25 @@ const RagBotAnalyticsPage: React.FC = () => {
   const [analytics, setAnalytics] = useState<any>(null);
   const [timeRange, setTimeRange] = useState('7d');
 
+  const [unanswered, setUnanswered] = useState<{ question: string; count: number; reason: string; lastAskedAt: string }[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const days = timeRange === '24h' ? 1 : timeRange === '30d' ? 30 : 7;
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [botRes, analyticsRes] = await Promise.all([
+      setLoadError(null);
+      const [botRes, analyticsRes, unansweredRes] = await Promise.all([
         ragBotAPI.getById(projectId!, botId!),
-        ragBotAPI.getAnalytics(projectId!, botId!)
+        ragBotAPI.getAnalytics(projectId!, botId!, days),
+        ragBotAPI.getUnanswered(projectId!, botId!, Math.max(days, 7)),
       ]);
       setBot(botRes.data.data);
       setAnalytics(analyticsRes.data.data);
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-      // Fallback data for demonstration if API fails/not implemented yet
-      setAnalytics({
-        overview: {
-          totalConversations: 124,
-          totalMessages: 856,
-          avgSatisfaction: 4.2,
-          helpfulCount: 89,
-          notHelpfulCount: 12
-        },
-        chartData: [
-          { date: '2024-05-10', convos: 12, msgs: 65 },
-          { date: '2024-05-11', convos: 18, msgs: 92 },
-          { date: '2024-05-12', convos: 15, msgs: 78 },
-          { date: '2024-05-13', convos: 22, msgs: 110 },
-          { date: '2024-05-14', convos: 30, msgs: 156 },
-          { date: '2024-05-15', convos: 25, msgs: 120 },
-          { date: '2024-05-16', convos: 28, msgs: 140 },
-        ],
-        topQuestions: [
-          { question: "How do I upgrade my plan?", count: 45 },
-          { question: "What are your integration options?", count: 32 },
-          { question: "Do you have a free trial?", count: 28 },
-          { question: "How to reset my password?", count: 18 },
-          { question: "Support hours?", count: 12 },
-        ]
-      });
+      setUnanswered(unansweredRes.data.data);
+    } catch (error: any) {
+      setLoadError(error.response?.data?.message || 'Could not load analytics');
+      toast.error('Could not load analytics');
     } finally {
       setLoading(false);
     }
@@ -83,7 +65,7 @@ const RagBotAnalyticsPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [projectId, botId]);
+  }, [projectId, botId, timeRange]);
 
   if (loading && !bot) {
     return <RagBotAnalyticsSkeleton />;
@@ -95,7 +77,7 @@ const RagBotAnalyticsPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate(`/dashboard/projects/${projectId}/rag-bots`)}
+            onClick={() => navigate(`/dashboard/project/${projectId}/rag-bots`)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
           >
             <ChevronLeft className="w-5 h-5 text-gray-500" />
@@ -135,9 +117,7 @@ const RagBotAnalyticsPage: React.FC = () => {
               <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
                  <MessageSquare className="w-5 h-5" />
               </div>
-              <span className="flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                 <ArrowUpRight className="w-3 h-3 mr-1" /> 12%
-              </span>
+              <span className="text-xs font-bold text-gray-400">{timeRange.toUpperCase()}</span>
            </div>
            <p className="text-sm font-medium text-gray-500">Conversations</p>
            <h3 className="text-3xl font-bold text-gray-900 mt-1">{analytics?.overview.totalConversations}</h3>
@@ -148,9 +128,7 @@ const RagBotAnalyticsPage: React.FC = () => {
               <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
                  <Users className="w-5 h-5" />
               </div>
-              <span className="flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                 <ArrowUpRight className="w-3 h-3 mr-1" /> 8%
-              </span>
+              <span className="text-xs font-bold text-gray-400">{timeRange.toUpperCase()}</span>
            </div>
            <p className="text-sm font-medium text-gray-500">Total Messages</p>
            <h3 className="text-3xl font-bold text-gray-900 mt-1">{analytics?.overview.totalMessages}</h3>
@@ -165,7 +143,9 @@ const RagBotAnalyticsPage: React.FC = () => {
            </div>
            <p className="text-sm font-medium text-gray-500">AI Accuracy</p>
            <h3 className="text-3xl font-bold text-gray-900 mt-1">
-             {Math.round((analytics?.overview.helpfulCount / (analytics?.overview.helpfulCount + analytics?.overview.notHelpfulCount)) * 100 || 0)}%
+             {(analytics?.overview.helpfulCount + analytics?.overview.notHelpfulCount) > 0
+               ? `${Math.round((analytics.overview.helpfulCount / (analytics.overview.helpfulCount + analytics.overview.notHelpfulCount)) * 100)}%`
+               : '—'}
            </h3>
         </div>
 
@@ -174,10 +154,10 @@ const RagBotAnalyticsPage: React.FC = () => {
               <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
                  <Calendar className="w-5 h-5" />
               </div>
-              <span className="text-xs font-bold text-gray-400">Rating</span>
+              <span className="text-xs font-bold text-gray-400">Leads</span>
            </div>
-           <p className="text-sm font-medium text-gray-500">Satisfaction</p>
-           <h3 className="text-3xl font-bold text-gray-900 mt-1">{analytics?.overview.avgSatisfaction}/5.0</h3>
+           <p className="text-sm font-medium text-gray-500">Emails captured</p>
+           <h3 className="text-3xl font-bold text-gray-900 mt-1">{analytics?.overview.leadsCaptured ?? 0}</h3>
         </div>
       </div>
 
@@ -214,7 +194,7 @@ const RagBotAnalyticsPage: React.FC = () => {
                       tickLine={false} 
                       tick={{ fill: '#94a3b8', fontSize: 10 }} 
                       dy={10}
-                      tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { weekday: 'short' })}
+                      tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
                     <Tooltip 
@@ -247,6 +227,9 @@ const RagBotAnalyticsPage: React.FC = () => {
              <Info className="w-4 h-4 text-gray-300" />
            </h3>
            <div className="space-y-5 flex-grow">
+              {(analytics?.topQuestions || []).length === 0 && (
+                <p className="text-sm text-gray-400">No questions in this period yet.</p>
+              )}
               {analytics?.topQuestions.map((item: any, idx: number) => (
                 <div key={idx} className="space-y-2">
                    <div className="flex justify-between text-xs">
@@ -264,7 +247,7 @@ const RagBotAnalyticsPage: React.FC = () => {
            </div>
            <div className="mt-8 pt-6 border-t border-gray-50">
               <Link 
-                to={`/dashboard/projects/${projectId}/knowledge`}
+                to={`/dashboard/project/${projectId}/chatbot/knowledge`}
                 className="text-xs font-bold text-indigo-600 hover:underline flex items-center justify-center gap-1"
               >
                 Refine Knowledge Base <ArrowUpRight className="w-3 h-3" />
@@ -273,47 +256,34 @@ const RagBotAnalyticsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Feedback Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <ThumbsUp className="w-5 h-5 text-green-500" />
-              Helpful Responses
-            </h3>
-            <div className="space-y-4">
-               {[1, 2, 3].map(i => (
-                 <div key={i} className="p-4 bg-green-50/50 rounded-2xl border border-green-100 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-2 text-green-200">
-                       <MessageSquare className="w-8 h-8 opacity-50" />
-                    </div>
-                    <p className="text-xs text-gray-500 mb-1 font-mono uppercase tracking-tighter">Query: "Pricing for Enterprise"</p>
-                    <p className="text-sm text-green-900 font-medium line-clamp-2 italic">"...all enterprise plans include dedicated support and custom LLM window..."</p>
+      {/* Knowledge gaps (real data) */}
+      <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+         <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+           <ThumbsDown className="w-5 h-5 text-red-400" />
+           Questions your bot couldn't answer well
+         </h3>
+         <p className="text-sm text-gray-500 mb-6">No matching knowledge was found, or visitors marked the answer unhelpful. Add answers to your knowledge base or publish content that covers them.</p>
+         {loadError && <p className="text-sm text-red-600 mb-4">{loadError}</p>}
+         {unanswered.length === 0 ? (
+           <div className="p-6 border-2 border-dashed border-gray-100 rounded-3xl text-center">
+             <p className="text-sm text-gray-400 font-medium">No knowledge gaps found in this period.</p>
+           </div>
+         ) : (
+           <div className="grid md:grid-cols-2 gap-3">
+             {unanswered.slice(0, 20).map((q, i) => (
+               <div key={i} className="p-4 bg-red-50/30 rounded-2xl border border-red-100 border-dashed">
+                 <p className="text-sm text-red-900 font-bold mb-2">"{q.question}"</p>
+                 <div className="flex flex-wrap items-center gap-2">
+                   <span className="text-[10px] bg-white border border-red-200 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                     {q.reason === 'no_sources' ? 'MISSING KNOWLEDGE' : 'RATED UNHELPFUL'}
+                   </span>
+                   <span className="text-[10px] text-gray-500">asked {q.count}×</span>
+                   <Link to={`/dashboard/project/${projectId}/chatbot/knowledge`} className="text-[10px] text-indigo-600 font-bold hover:underline">Add to knowledge →</Link>
                  </div>
-               ))}
-            </div>
-         </div>
-
-         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <ThumbsDown className="w-5 h-5 text-red-400" />
-              Identified Knowledge Gaps
-            </h3>
-            <div className="space-y-4">
-               {[1, 2].map(i => (
-                 <div key={i} className="p-4 bg-red-50/30 rounded-2xl border border-red-100 shadow-sm border-dashed">
-                    <p className="text-xs text-gray-500 mb-1 font-mono uppercase tracking-tighter italic">Topic: Unknown</p>
-                    <p className="text-sm text-red-900 font-bold mb-2">"Can I pay via crypto?"</p>
-                    <div className="flex items-center gap-2">
-                       <span className="text-[10px] bg-white border border-red-200 text-red-600 px-2 py-0.5 rounded-full font-bold">MISSING CONTEXT</span>
-                       <button className="text-[10px] text-indigo-600 font-bold hover:underline">Add to Knowledge →</button>
-                    </div>
-                 </div>
-               ))}
-               <div className="p-6 border-2 border-dashed border-gray-100 rounded-3xl flex flex-col items-center justify-center text-center">
-                  <p className="text-sm text-gray-400 font-medium">Great job! Most queries are covered.</p>
                </div>
-            </div>
-         </div>
+             ))}
+           </div>
+         )}
       </div>
 
     </div>

@@ -45,6 +45,16 @@ import { ArchivePage } from '@/pages/archive/ArchivePage';
 import { NotFoundPage } from '@/pages/public/NotFoundPage';
 import { ContentCalendar } from '@/pages/calendar/ContentCalendar';
 import { CommandMenu } from '@/components/ui/CommandMenu';
+import CampaignsPage from '@/pages/marketing/CampaignsPage';
+import CampaignEditorPage from '@/pages/marketing/CampaignEditorPage';
+import AudiencePage from '@/pages/marketing/AudiencePage';
+import SegmentsPage from '@/pages/marketing/SegmentsPage';
+import EmailSettingsPage from '@/pages/marketing/EmailSettingsPage';
+import AISettingsPage from '@/pages/settings/AISettingsPage';
+import SeoSettingsPage from '@/pages/seo/SeoSettingsPage';
+import GeoPage from '@/pages/seo/GeoPage';
+import RedirectsPage from '@/pages/seo/RedirectsPage';
+import PageSpeedPage from '@/pages/seo/PageSpeedPage';
 import { Toaster } from '@/components/ui';
 
 import { ProtectedRoute } from '@/components/auth';
@@ -177,7 +187,7 @@ export default function App() {
                 {/* Global Settings */}
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="settings/environment" element={<EnvironmentPage />} />
-                <Route path="settings/environment" element={<EnvironmentPage />} />
+                <Route path="settings/ai" element={<AISettingsPage />} />
                 <Route path="settings/mfa" element={<MFASetupPage />} />
                 <Route path="settings/sso" element={<SSOConfigPage />} />
                 <Route path="settings/security" element={<SecurityPage />} />
@@ -289,8 +299,13 @@ export default function App() {
                 <Route path="workflows/new" element={<WorkflowBuilderPage />} />
                 <Route path="workflows/:workflowId/edit" element={<WorkflowBuilderPage />} />
 
-                {/* Email Templates */}
+                {/* Email Marketing */}
                 <Route path="email-templates" element={<EmailTemplatesPage />} />
+                <Route path="email/campaigns" element={<CampaignsPage />} />
+                <Route path="email/campaigns/:campaignId" element={<CampaignEditorPage />} />
+                <Route path="email/audience" element={<AudiencePage />} />
+                <Route path="email/segments" element={<SegmentsPage />} />
+                <Route path="email/settings" element={<EmailSettingsPage />} />
 
                 {/* Trash & Archive */}
                 <Route path="trash" element={<TrashPage />} />
@@ -300,6 +315,7 @@ export default function App() {
                 <Route path="settings/mfa" element={<MFASetupPage />} />
                 <Route path="settings/sso" element={<SSOConfigPage />} />
                 <Route path="settings/security" element={<SecurityPage />} />
+                <Route path="settings/ai" element={<AISettingsPage />} />
 
                 {/* SEO Suite */}
                 <Route path="seo" element={<SeoDashboardPage />} />
@@ -308,6 +324,10 @@ export default function App() {
                 <Route path="seo/schema" element={<SchemaBuilderPage />} />
                 <Route path="seo/audit" element={<SiteAuditPage />} />
                 <Route path="seo/keywords" element={<KeywordTrackerPage />} />
+                <Route path="seo/settings" element={<SeoSettingsPage />} />
+                <Route path="seo/geo" element={<GeoPage />} />
+                <Route path="seo/redirects" element={<RedirectsPage />} />
+                <Route path="seo/pagespeed" element={<PageSpeedPage />} />
             </Route>
 
             {/* Project-specific routes (Alias) */}

@@ -195,7 +195,7 @@ const WidgetAppearanceStep: React.FC<WidgetAppearanceStepProps> = ({ formData, s
              <div className="flex items-center justify-between">
                 <div>
                    <Label className="text-sm font-bold">Collect Emails</Label>
-                   <p className="text-[10px] text-gray-500">Ask for visitor email before starting chat</p>
+                   <p className="text-[10px] text-gray-500">After the first answer, offer to follow up by email. Leads go to Email → Audience (tag “chatbot”).</p>
                 </div>
                 <Switch 
                   checked={formData.widget.collectEmail} 

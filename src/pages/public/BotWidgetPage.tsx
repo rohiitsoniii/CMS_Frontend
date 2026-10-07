@@ -40,6 +40,9 @@ export default function BotWidgetPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [lead, setLead] = useState({ email: '', name: '' });
+    const [leadState, setLeadState] = useState<'idle' | 'sending' | 'done' | 'dismissed'>('idle');
+    const [leadError, setLeadError] = useState<string | null>(null);
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -120,6 +123,39 @@ export default function BotWidgetPage() {
         }
     };
 
+    const submitLead = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!lead.email.trim()) return;
+        setLeadState('sending');
+        setLeadError(null);
+        try {
+            const res = await ragBotAPI.submitLead(botId!, apiKey!, { ...lead, sessionId: sessionIdRef.current });
+            setLeadState('done');
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: res.data.data?.needsConfirmation
+                    ? 'Thanks! Please check your inbox to confirm your email.'
+                    : "Thanks! We'll be in touch.",
+                timestamp: new Date()
+            }]);
+        } catch (err: any) {
+            setLeadState('idle');
+            setLeadError(err.response?.data?.message || 'Could not save your email');
+        }
+    };
+
+    // Ask for an email after the visitor has had one answer
+    const showLeadForm = Boolean(bot?.widget?.collectEmail) && leadState !== 'done' && leadState !== 'dismissed'
+        && messages.filter(m => m.role === 'assistant').length >= 2;
+
+    const sourceLabel = (source: any) => {
+        if (source.sourceFile) return source.sourceFile;
+        if (source.sourceUrl) {
+            try { return new URL(source.sourceUrl).hostname; } catch { return source.sourceUrl; }
+        }
+        return 'CMS';
+    };
+
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center bg-gray-50">
@@ -194,7 +230,7 @@ export default function BotWidgetPage() {
                                                     className="bg-gray-50 text-[9px] py-0 h-5 border-gray-100 text-gray-500 hover:text-indigo-600 cursor-pointer flex items-center gap-1"
                                                 >
                                                     <ExternalLink className="w-2 h-2" />
-                                                    {source.sourceFile || (source.sourceUrl ? new URL(source.sourceUrl).hostname : 'CMS')}
+                                                    {sourceLabel(source)}
                                                 </Badge>
                                             ))}
                                         </div>
@@ -218,6 +254,36 @@ export default function BotWidgetPage() {
                                 <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />
                             </div>
                         </div>
+                    )}
+                    {showLeadForm && (
+                        <form onSubmit={submitLead} className="bg-white border border-indigo-100 rounded-2xl p-3 shadow-sm space-y-2">
+                            <p className="text-xs font-medium text-gray-700">Want us to follow up? Leave your email.</p>
+                            <Input
+                                value={lead.name}
+                                onChange={(e) => setLead({ ...lead, name: e.target.value })}
+                                placeholder="Name (optional)"
+                                className="h-9 text-sm"
+                                aria-label="Your name"
+                            />
+                            <Input
+                                type="email"
+                                required
+                                value={lead.email}
+                                onChange={(e) => setLead({ ...lead, email: e.target.value })}
+                                placeholder="you@example.com"
+                                className="h-9 text-sm"
+                                aria-label="Your email"
+                            />
+                            {leadError && <p className="text-xs text-red-600">{leadError}</p>}
+                            <div className="flex gap-2">
+                                <Button type="submit" size="sm" className="flex-1" disabled={leadState === 'sending'}>
+                                    {leadState === 'sending' ? 'Saving…' : 'Send'}
+                                </Button>
+                                <Button type="button" size="sm" variant="ghost" onClick={() => setLeadState('dismissed')}>
+                                    No thanks
+                                </Button>
+                            </div>
+                        </form>
                     )}
                     <div ref={messagesEndRef} />
                 </div>
