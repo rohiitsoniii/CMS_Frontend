@@ -21,7 +21,8 @@ let socket: Socket | null = null;
 
 function getSocket(token: string): Socket {
   if (!socket || !socket.connected) {
-    socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/v1\/?$/, '');
+    socket = io(baseUrl, {
       path: '/socket.io',
       auth: { token },
       transports: ['websocket'],

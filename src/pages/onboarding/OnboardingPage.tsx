@@ -21,6 +21,7 @@ export function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [projectData, setProjectData] = useState({ name: '', description: '' });
+  const [createdProjectId, setCreatedProjectId] = useState<string>('');
   const [teamEmails, setTeamEmails] = useState('');
   const navigate = useNavigate();
 
@@ -34,7 +35,11 @@ export function OnboardingPage() {
 
     setLoading(true);
     try {
-      await api.post('/projects', projectData);
+      const res = await api.post('/projects', projectData);
+      const proj = res.data?.data || res.data;
+      if (proj?._id || proj?.id) {
+        setCreatedProjectId(proj._id || proj.id);
+      }
       toast.success('Project created successfully');
       setStep(3);
     } catch (error: any) {
@@ -54,7 +59,12 @@ export function OnboardingPage() {
     try {
       const emails = teamEmails.split(',').map(e => e.trim()).filter(Boolean);
       await Promise.all(emails.map(email => 
-        api.post('/team/invite', { email, role: 'editor' })
+        api.post('/team/invite', { 
+          email, 
+          name: email.split('@')[0],
+          role: 'editor',
+          projectId: createdProjectId || undefined
+        })
       ));
       toast.success('Team invitations sent');
       setStep(4);

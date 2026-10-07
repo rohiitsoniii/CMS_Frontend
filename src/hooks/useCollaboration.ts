@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { useAuthStore } from '@/store';
 
 interface User {
   id: string;
@@ -43,10 +44,11 @@ export function useCollaboration({
   useEffect(() => {
     if (!enabled) return;
 
-    const token = localStorage.getItem('token');
+    const token = useAuthStore.getState().accessToken || localStorage.getItem('token');
     if (!token) return;
 
-    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/v1\/?$/, '');
+    const newSocket = io(socketUrl, {
       path: '/socket.io',
       auth: { token },
       transports: ['websocket', 'polling'],

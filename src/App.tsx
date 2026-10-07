@@ -1,5 +1,6 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { LoginPage, RegisterPage, MFASetupPage, SSOConfigPage, SecurityPage } from '@/pages/auth';
+import { AcceptInvitePage } from '@/pages/auth/AcceptInvitePage';
 import { ContentListPage, ContentEditorPage } from '@/pages/content';
 import { APIKeysPage } from '@/pages/apikeys';
 import { 
@@ -62,6 +63,13 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
 
 import BotWidgetPage from '@/pages/public/BotWidgetPage';
 
+
+// Helper to redirect legacy /dashboard/projects/:projectId to canonical /dashboard/project/:projectId
+function ProjectAliasRedirect() {
+    const { projectId, '*': rest } = useParams();
+    return <Navigate to={`/dashboard/project/${projectId}${rest ? `/${rest}` : ''}`} replace />;
+}
+
 export default function App() {
     return (
         <>
@@ -92,7 +100,17 @@ export default function App() {
             />
 
             {/* Onboarding */}
-            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route
+                path="/onboarding"
+                element={
+                    <ProtectedRoute>
+                        <OnboardingPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Accept Team Invitation */}
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
             {/* Protected dashboard routes */}
             <Route
@@ -148,7 +166,7 @@ export default function App() {
             <Route
                 path="/admin/system"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute requiredRole="superAdmin">
                         <SuperAdminLayout />
                     </ProtectedRoute>
                 }
@@ -262,69 +280,7 @@ export default function App() {
             </Route>
 
             {/* Project-specific routes (Alias) */}
-            <Route
-                path="/dashboard/projects/:projectId"
-                element={
-                    <ProtectedRoute>
-                        <ProjectDashboard />
-                    </ProtectedRoute>
-                }
-            >
-                {/* Same routes as above - simplified by redirection or identical nesting */}
-                <Route index element={<ProjectOverview />} />
-                <Route path="content-types" element={<ContentTypesListPage />} />
-                <Route path="content-types/new" element={<ContentTypeBuilderPage />} />
-                <Route path="content-types/:contentTypeId" element={<ContentTypesListPage />} />
-                <Route path="content-types/:contentTypeId/edit" element={<ContentTypeBuilderPage />} />
-                <Route path="content/:contentTypeId" element={<DynamicContentListPage />} />
-                <Route path="content/:contentTypeId/new" element={<DynamicContentEditorPage />} />
-                <Route path="content/:contentTypeId/:contentId" element={<DynamicContentEditorPage />} />
-                <Route path="locales" element={<LocalesPage />} />
-                <Route path="chatbot/knowledge" element={<KnowledgeBasePage />} />
-                <Route path="chatbot/conversations" element={<ChatbotConversationsPage />} />
-                <Route path="chatbot/settings" element={<ChatbotSettingsPage />} />
-                <Route path="rag-bots" element={<RagBotListPage />} />
-                <Route path="rag-bots/:botId" element={<RagBotBuilderPage />} />
-                <Route path="rag-bots/:botId/analytics" element={<RagBotAnalyticsPage />} />
-                <Route path="media" element={<MediaLibraryPage />} />
-                <Route path="analytics" element={<AnalyticsPage />} />
-                <Route path="api-keys" element={<APIKeysPage />} />
-                <Route path="team" element={<TeamPage />} />
-                <Route path="team/roles" element={<RolesPage />} />
-                <Route path="users" element={<UsersPage />} />
-                <Route path="webhooks" element={<WebhooksPage />} />
-                <Route path="webhooks/logs" element={<WebhookLogsPage />} />
-                <Route path="schedules" element={<ContentSchedulingPage />} />
-                <Route path="workflows" element={<WorkflowListPage />} />
-                <Route path="workflows/new" element={<WorkflowBuilderPage />} />
-                <Route path="workflows/:workflowId/edit" element={<WorkflowBuilderPage />} />
-                {/* Content Calendar */}
-                <Route path="calendar" element={<ContentCalendar />} />
-
-                {/* Import / Export */}
-                <Route path="import-export" element={<ImportExportPage />} />
-
-                {/* Backup */}
-                <Route path="backup" element={<BackupPage />} />
-
-                {/* Archive */}
-                <Route path="archive" element={<ArchivePage />} />
-                <Route path="email-templates" element={<EmailTemplatesPage />} />
-                <Route path="trash" element={<TrashPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="settings/environment" element={<EnvironmentPage />} />
-                <Route path="settings/mfa" element={<MFASetupPage />} />
-                <Route path="settings/sso" element={<SSOConfigPage />} />
-                <Route path="settings/security" element={<SecurityPage />} />
-
-                {/* SEO Suite */}
-                <Route path="seo" element={<SeoDashboardPage />} />
-                <Route path="seo/sitemap" element={<SitemapConfigPage />} />
-                <Route path="seo/robots" element={<RobotsEditorPage />} />
-                <Route path="seo/schema" element={<SchemaBuilderPage />} />
-                <Route path="seo/audit" element={<SiteAuditPage />} />
-                <Route path="seo/keywords" element={<KeywordTrackerPage />} />
-            </Route>
+            <Route path="/dashboard/projects/:projectId/*" element={<ProjectAliasRedirect />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
