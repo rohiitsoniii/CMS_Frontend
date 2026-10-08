@@ -23,13 +23,17 @@ import {
     ScrollText,
     FolderKanban,
     CreditCard,
-    ShieldAlert
+    ShieldAlert,
+    Gauge,
+    Sparkles,
+    Puzzle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/store';
 import { NotificationCenter } from '@/components/ui/NotificationCenter';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 
 const navigation = [
@@ -39,6 +43,9 @@ const navigation = [
     { name: 'API Keys', href: '/dashboard/api-keys', icon: Key },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
     { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
+    { name: 'Usage', href: '/dashboard/usage', icon: Gauge },
+    { name: 'AI Settings', href: '/dashboard/settings/ai', icon: Sparkles },
+    { name: 'Plugins', href: '/dashboard/plugins', icon: Puzzle },
     { name: 'Audit Logs', href: '/dashboard/audit-logs', icon: ScrollText },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
     { name: 'Support', href: '/dashboard/support', icon: HelpCircle },
@@ -184,6 +191,7 @@ export default function DashboardLayout() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                            <LanguageSwitcher />
                             <NotificationCenter />
                             <Button
                                 variant="ghost"

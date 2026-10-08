@@ -227,10 +227,16 @@ export const twoFactorAPI = {
 // ============================
 // SSO API
 // ============================
+export type SSOProviderId = 'google' | 'microsoft' | 'github';
+
 export const ssoAPI = {
+  providers: () => api.get('/sso/providers'),
   getStatus: () => api.get('/sso/status'),
+  getLoginUrl: (provider: SSOProviderId) => api.get(`/sso/${provider}/url`),
+  getLinkUrl: (provider: SSOProviderId) => api.get(`/sso/${provider}/link-url`),
+  unlink: () => api.post('/sso/unlink'),
+  // Back-compat
   getGoogleUrl: () => api.get('/sso/google/url'),
-  linkGoogle: (code: string) => api.post('/sso/google/link', { code }),
   unlinkGoogle: () => api.post('/sso/google/unlink'),
 };
 
@@ -774,6 +780,12 @@ export const ragBotAPI = {
 
   submitLead: (botSlug: string, apiKey: string, data: { email: string; name?: string; sessionId: string }) =>
     api.post(`/bots/${botSlug}/lead`, data, { headers: { 'x-bot-key': apiKey } }),
+
+  requestHandoff: (botSlug: string, apiKey: string, data: { sessionId: string; email?: string; message?: string }) =>
+    api.post(`/bots/${botSlug}/handoff`, data, { headers: { 'x-bot-key': apiKey } }),
+
+  pollMessages: (botSlug: string, apiKey: string, sessionId: string, after?: string) =>
+    api.get(`/bots/${botSlug}/messages`, { params: { sessionId, after }, headers: { 'x-bot-key': apiKey } }),
 };
 
 

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { authAPI, api } from '@/services/api';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
+import { SSOButtons } from '@/components/auth/SSOButtons';
 import { useAuthStore } from '@/store';
 
 const loginSchema = z.object({
@@ -169,6 +170,9 @@ export default function LoginPage() {
                             )}
                         </Button>
                     </form>
+                    <div className="mt-4">
+                        <SSOButtons onError={setError} />
+                    </div>
                 </CardContent>
                 <CardFooter className="flex justify-center border-t">
                     <p className="text-sm text-gray-600 dark:text-gray-400">

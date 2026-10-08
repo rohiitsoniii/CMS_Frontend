@@ -1,5 +1,6 @@
 {
-    "totalJsGzipKB": 700,
+    "initialJsGzipKB": 700,
+    "totalJsGzipKB": 800,
     "totalCssGzipKB": 30,
-    "notes": "Bump deliberately: lower only with a plan (code-split or dep removal). CI fails the build when exceeded."
+    "notes": "Bump deliberately: lower only with a plan (code-split or dep removal). CI fails the build when exceeded. initialJsGzipKB guards what every visitor downloads; totalJsGzipKB includes on-demand pages and was raised 700→800 for the lazy-loaded growth pages (email, forms, automations, inbox, SEO tools), which add ~55 KB but none to first load."
 }

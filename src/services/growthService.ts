@@ -122,3 +122,194 @@ export const seoSuiteAPI = {
         api.get(`${seo(p)}/pagespeed`, { params: { url, strategy }, timeout: 120_000 }),
     checkRanks: (p: string, keywordId?: string) => api.post(`${seo(p)}/keywords/check`, { keywordId }),
 };
+
+// ---------------------------------------------------------------------------
+// Website analytics
+// ---------------------------------------------------------------------------
+
+export interface TopRow { key: string; views: number; visitors: number }
+
+export interface SiteReport {
+    range: { from: string; to: string };
+    totals: { pageviews: number; visitors: number; sessions: number; pagesPerSession: number; bounceRate: number };
+    series: { t: string; pageviews: number; visitors: number }[];
+    pages: TopRow[];
+    referrers: TopRow[];
+    sources: TopRow[];
+    campaigns: TopRow[];
+    devices: TopRow[];
+    browsers: TopRow[];
+    countries: TopRow[];
+    events: { name: string; count: number; visitors: number; value: number; conversionRate: number }[];
+}
+
+export const siteAnalyticsAPI = {
+    report: (p: string, days: number) => api.get(`/projects/${p}/site-analytics`, { params: { days } }),
+    realtime: (p: string) => api.get(`/projects/${p}/site-analytics/realtime`),
+};
+
+// ---------------------------------------------------------------------------
+// Forms
+// ---------------------------------------------------------------------------
+
+export type FormFieldType = 'text' | 'email' | 'phone' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'url' | 'hidden' | 'consent';
+
+export interface FormField {
+    key: string;
+    label: string;
+    type: FormFieldType;
+    required: boolean;
+    placeholder?: string;
+    helpText?: string;
+    options?: string[];
+    defaultValue?: string;
+}
+
+export interface FormDef {
+    _id: string;
+    name: string;
+    description?: string;
+    status: 'active' | 'paused';
+    fields: FormField[];
+    settings: {
+        submitLabel: string;
+        successMessage: string;
+        redirectUrl?: string;
+        notifyEmails: string[];
+        addToAudience: boolean;
+        audienceTags: string[];
+        autoReply?: { enabled: boolean; subject?: string; body?: string };
+    };
+    stats: { submissions: number; lastSubmissionAt?: string };
+    unread?: number;
+    createdAt: string;
+}
+
+export interface FormSubmissionRow {
+    _id: string;
+    formId: { _id: string; name: string } | string;
+    data: Record<string, string>;
+    email?: string;
+    status: 'new' | 'read' | 'archived' | 'spam';
+    meta: { page?: string; utm?: Record<string, string> };
+    createdAt: string;
+}
+
+export const formsAPI = {
+    list: (p: string) => api.get(`/projects/${p}/forms`),
+    get: (p: string, id: string) => api.get(`/projects/${p}/forms/${id}`),
+    create: (p: string, data: Partial<FormDef>) => api.post(`/projects/${p}/forms`, data),
+    update: (p: string, id: string, data: Partial<FormDef>) => api.put(`/projects/${p}/forms/${id}`, data),
+    remove: (p: string, id: string) => api.delete(`/projects/${p}/forms/${id}`),
+    exportCsv: (p: string, id: string) => api.get(`/projects/${p}/forms/${id}/export`, { responseType: 'blob' }),
+    submissions: (p: string, params: Record<string, any> = {}) => api.get(`/projects/${p}/form-submissions`, { params }),
+    setSubmissionStatus: (p: string, id: string, status: string) => api.put(`/projects/${p}/form-submissions/${id}`, { status }),
+    deleteSubmission: (p: string, id: string) => api.delete(`/projects/${p}/form-submissions/${id}`),
+};
+
+// ---------------------------------------------------------------------------
+// Automations
+// ---------------------------------------------------------------------------
+
+export interface AutomationStep {
+    delayMinutes: number;
+    subject: string;
+    previewText?: string;
+    htmlContent: string;
+    campaignId?: string;
+    stats?: { sent: number; opened: number; clicked: number; unsubscribed: number };
+}
+
+export interface Automation {
+    _id: string;
+    name: string;
+    status: 'draft' | 'active' | 'paused';
+    trigger: { type: 'subscribed' | 'tag_added' | 'form_submitted' | 'content_published'; tag?: string; formId?: string; contentTypes?: string[]; segmentId?: string; sendMode?: 'send' | 'draft' };
+    steps: AutomationStep[];
+    fromName?: string;
+    stats: { enrolled: number; completed: number; sent: number };
+    createdAt: string;
+}
+
+export const automationsAPI = {
+    list: (p: string) => api.get(`/projects/${p}/automations`),
+    get: (p: string, id: string) => api.get(`/projects/${p}/automations/${id}`),
+    create: (p: string, data: Partial<Automation>) => api.post(`/projects/${p}/automations`, data),
+    update: (p: string, id: string, data: Partial<Automation>) => api.put(`/projects/${p}/automations/${id}`, data),
+    remove: (p: string, id: string) => api.delete(`/projects/${p}/automations/${id}`),
+};
+
+// ---------------------------------------------------------------------------
+// Live chat inbox
+// ---------------------------------------------------------------------------
+
+export interface InboxConversation {
+    _id: string;
+    botName?: string;
+    visitorEmail?: string;
+    status: 'bot' | 'requested' | 'human' | 'closed';
+    assignedName?: string;
+    unread: number;
+    lastMessageAt: string;
+    preview: string;
+    messageCount: number;
+}
+
+export interface ChatMessage {
+    role: 'user' | 'assistant' | 'agent' | 'system';
+    content: string;
+    agentName?: string;
+    timestamp: string;
+}
+
+export const inboxAPI = {
+    list: (p: string, status = 'open') => api.get(`/projects/${p}/inbox`, { params: { status } }),
+    get: (p: string, id: string) => api.get(`/projects/${p}/inbox/${id}`),
+    reply: (p: string, id: string, message: string, emailCopy = false) => api.post(`/projects/${p}/inbox/${id}/reply`, { message, emailCopy }),
+    setStatus: (p: string, id: string, status: 'bot' | 'human' | 'closed') => api.post(`/projects/${p}/inbox/${id}/status`, { status }),
+};
+
+// ---------------------------------------------------------------------------
+// Usage, contact profile
+// ---------------------------------------------------------------------------
+
+export interface UsageItem { label: string; used: number; limit: number; unit: string; period: 'month' | 'total' }
+
+export const usageAPI = {
+    summary: () => api.get('/usage'),
+};
+
+export const contactsAPI = {
+    profile: (p: string, id: string) => api.get(`/projects/${p}/contacts/${id}/profile`),
+};
+
+// ---------------------------------------------------------------------------
+// Search Console, content brief, deliverability
+// ---------------------------------------------------------------------------
+
+export const gscAPI = {
+    status: (p: string) => api.get(`/projects/${p}/seo/gsc`),
+    connectUrl: (p: string) => api.get(`/projects/${p}/seo/gsc/connect-url`),
+    sites: (p: string) => api.get(`/projects/${p}/seo/gsc/sites`),
+    selectSite: (p: string, siteUrl: string) => api.put(`/projects/${p}/seo/gsc/site`, { siteUrl }),
+    performance: (p: string, days = 28) => api.get(`/projects/${p}/seo/gsc/performance`, { params: { days }, timeout: 60_000 }),
+    disconnect: (p: string) => api.delete(`/projects/${p}/seo/gsc`),
+};
+
+export const briefAPI = {
+    create: (p: string, keyword: string, audience?: string) => api.post(`/projects/${p}/seo/brief`, { keyword, audience }, { timeout: 120_000 }),
+    analyze: (p: string, data: { html: string; title?: string; metaDescription?: string }) => api.post(`/projects/${p}/seo/geo/analyze`, data),
+};
+
+export interface DnsCheckRow {
+    id: 'spf' | 'dkim' | 'dmarc' | 'mx';
+    status: 'pass' | 'warn' | 'fail';
+    record?: string;
+    message: string;
+    fix?: string;
+}
+
+export const deliverabilityAPI = {
+    dns: (p: string) => api.get(`/projects/${p}/email/settings/dns`),
+    eventsWebhook: (p: string, rotate = false) => api.get(`/projects/${p}/email/settings/events-webhook`, { params: rotate ? { rotate: 1 } : {} }),
+};

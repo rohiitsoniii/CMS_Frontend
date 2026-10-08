@@ -5,6 +5,7 @@ import { Button, Input, Label, Switch, Textarea, Card, CardHeader, CardTitle, Ca
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { emailAPI, EmailSettings, SmtpPreset, errorMessage } from '@/services/emailMarketingService';
+import { DeliverabilityCard } from '@/components/marketing/DeliverabilityCard';
 
 const PRESET_LABELS: Record<string, string> = {
     gmail: 'Gmail / Google Workspace',
@@ -309,6 +310,8 @@ export default function EmailSettingsPage() {
                 </Button>
             </div>
             {!saved && <p className="text-xs text-gray-500 text-right">Save your settings before sending a test.</p>}
+
+            {saved && <DeliverabilityCard projectId={projectId!} usingOwnSmtp={saved.provider === 'custom'} />}
         </div>
     );
 }

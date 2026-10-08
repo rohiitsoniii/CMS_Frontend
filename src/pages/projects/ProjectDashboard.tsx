@@ -48,7 +48,12 @@ import {
     Filter,
     Gauge,
     ArrowRightLeft,
-    Settings2
+    Settings2,
+    Workflow as WorkflowIcon,
+    ClipboardList,
+    Inbox,
+    FileText,
+    Code2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -185,6 +190,7 @@ export default function ProjectDashboard() {
             href: '#aibots',
             children: [
                 { label: 'RAG Bots', icon: Bot, href: `/dashboard/project/${projectId}/rag-bots` },
+                { label: 'Live Chat Inbox', icon: Inbox, href: `/dashboard/project/${projectId}/inbox` },
                 { label: 'Knowledge Base', icon: Brain, href: `/dashboard/project/${projectId}/chatbot/knowledge` },
                 { label: 'Conversations', icon: MessagesSquare, href: `/dashboard/project/${projectId}/chatbot/conversations` },
                 { label: 'Legacy Settings', icon: Cog, href: `/dashboard/project/${projectId}/chatbot/settings` },
@@ -198,7 +204,21 @@ export default function ProjectDashboard() {
         {
             label: 'Analytics',
             icon: BarChart3,
-            href: `/dashboard/project/${projectId}/analytics`,
+            href: '#analytics',
+            children: [
+                { label: 'Website', icon: Globe, href: `/dashboard/project/${projectId}/analytics/website` },
+                { label: 'API & Content', icon: BarChart3, href: `/dashboard/project/${projectId}/analytics` },
+            ],
+        },
+        {
+            label: 'Forms',
+            icon: ClipboardList,
+            href: `/dashboard/project/${projectId}/forms`,
+        },
+        {
+            label: 'Install on Website',
+            icon: Code2,
+            href: `/dashboard/project/${projectId}/install`,
         },
         {
             label: 'API Keys',
@@ -220,6 +240,8 @@ export default function ProjectDashboard() {
                 { label: 'AI Search (GEO)', icon: Bot, href: `/dashboard/project/${projectId}/seo/geo` },
                 { label: 'Redirects & 404s', icon: ArrowRightLeft, href: `/dashboard/project/${projectId}/seo/redirects` },
                 { label: 'Page Speed', icon: Gauge, href: `/dashboard/project/${projectId}/seo/pagespeed` },
+                { label: 'Search Console', icon: Search, href: `/dashboard/project/${projectId}/seo/search-console` },
+                { label: 'Content Brief', icon: FileText, href: `/dashboard/project/${projectId}/seo/brief` },
                 { label: 'SEO Settings', icon: Settings2, href: `/dashboard/project/${projectId}/seo/settings` },
             ],
         },
@@ -262,6 +284,7 @@ export default function ProjectDashboard() {
             href: '#email',
             children: [
                 { label: 'Campaigns', icon: Send, href: `/dashboard/project/${projectId}/email/campaigns` },
+                { label: 'Automations', icon: WorkflowIcon, href: `/dashboard/project/${projectId}/email/automations` },
                 { label: 'Audience', icon: Users, href: `/dashboard/project/${projectId}/email/audience` },
                 { label: 'Segments', icon: Filter, href: `/dashboard/project/${projectId}/email/segments` },
                 { label: 'Templates', icon: FileCode, href: `/dashboard/project/${projectId}/email-templates` },

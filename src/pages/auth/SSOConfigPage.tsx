@@ -1,91 +1,85 @@
-﻿import toast from 'react-hot-toast';
-import React, { useState, useEffect } from 'react';
-import { ssoAPI } from '@/services/api';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Loader2, CheckCircle2, KeyRound } from 'lucide-react';
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '@/components/ui';
+import { useToast } from '@/hooks/use-toast';
+import { ssoAPI, SSOProviderId } from '@/services/api';
 
-export const SSOConfigPage: React.FC = () => {
-  const [ssoStatus, setSsoStatus] = useState<any>({ google: false });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+const PROVIDERS: { id: SSOProviderId; name: string; desc: string; env: string }[] = [
+    { id: 'google', name: 'Google', desc: 'Google accounts and Google Workspace', env: 'GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET' },
+    { id: 'microsoft', name: 'Microsoft', desc: 'Microsoft 365, Outlook and Entra ID (Azure AD)', env: 'MICROSOFT_CLIENT_ID / MICROSOFT_CLIENT_SECRET (MICROSOFT_TENANT_ID optional)' },
+    { id: 'github', name: 'GitHub', desc: 'GitHub accounts — handy for developer teams', env: 'GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET' },
+];
 
-  useEffect(() => {
-    ssoAPI.getStatus()
-      .then((res) => {
-        const data = res.data;
-        if (data.success) {
-          setSsoStatus(data.data);
-        } else {
-          setError(data.error);
+export const SSOConfigPage = () => {
+    const { toast } = useToast();
+    const [params] = useSearchParams();
+    const [status, setStatus] = useState<Record<string, any> | null>(null);
+    const [busy, setBusy] = useState<string | null>(null);
+
+    const load = () => ssoAPI.getStatus().then((r) => setStatus(r.data.data)).catch(() => setStatus({}));
+    useEffect(() => {
+        load();
+        if (params.get('linked')) toast({ title: `${params.get('linked')} account linked` });
+    }, []);
+
+    const link = async (p: SSOProviderId) => {
+        try {
+            setBusy(p);
+            window.location.href = (await ssoAPI.getLinkUrl(p)).data.data.url;
+        } catch (err: any) {
+            setBusy(null);
+            toast({ title: 'Could not start linking', description: err?.response?.data?.error, variant: 'destructive' });
         }
-      })
-      .catch(() => setError('Failed to load SSO status'))
-      .finally(() => setLoading(false));
-  }, []);
+    };
 
-  const handleLinkGoogle = async () => {
-    try {
-      const res = await ssoAPI.getGoogleUrl();
-      const data = res.data;
-      if (data.success) {
-        window.location.href = data.data.url; // Redirect to google auth
-      }
-    } catch {
-      setError('Could not establish link with Google');
-    }
-  };
+    const unlink = async () => {
+        await ssoAPI.unlink();
+        toast({ title: 'Sign-in provider unlinked' });
+        load();
+    };
 
-  const handleUnlinkGoogle = async () => {
-    try {
-      const res = await ssoAPI.unlinkGoogle();
-      const data = res.data;
-      if (data.success) {
-        setSsoStatus((prev: any) => ({ ...prev, googleLinked: false }));
-        toast.success('Google account unlinked successfully');
-      }
-    } catch {
-      setError('Failed to unlink account');
-    }
-  };
+    if (!status) return <div className="flex justify-center py-24"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
 
-  if (loading) return <div>Loading...</div>;
-
-  return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow mt-10">
-      <h2 className="text-2xl font-bold mb-6">Single Sign-On (SSO) Configuration</h2>
-      
-      {error && <div className="text-red-600 bg-red-50 p-3 rounded mb-4">{error}</div>}
-
-      <div className="border p-4 rounded-md">
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="font-semibold text-lg flex items-center">
-              Google Workspace (OIDC)
-              {ssoStatus.google ? 
-                <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded">System Enabled</span> :
-                <span className="ml-2 bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">System Disabled</span>
-              }
-            </h3>
-            <p className="text-sm text-gray-500 mt-1">Allow linking your personal account to login seamlessly.</p>
-          </div>
-          <div>
-            {!ssoStatus.googleLinked ? (
-              <button
-                disabled={!ssoStatus.google}
-                onClick={handleLinkGoogle}
-                className="bg-white border hover:bg-gray-50 px-4 py-2 font-medium rounded text-sm disabled:opacity-50"
-              >
-                Link Google Account
-              </button>
-            ) : (
-                <button
-                onClick={handleUnlinkGoogle}
-                className="text-red-600 hover:text-red-700 bg-red-50 px-4 py-2 font-medium rounded text-sm"
-              >
-                Unlink Account
-              </button>
-            )}
-          </div>
+    return (
+        <div className="max-w-3xl mx-auto space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold dark:text-white flex items-center gap-2"><KeyRound className="w-7 h-7" />Single sign-on</h1>
+                <p className="text-gray-500 mt-1">Sign in with an existing work account. Linking also lets you sign in even if your email changes.</p>
+            </div>
+            {PROVIDERS.map((p) => {
+                const enabled = Boolean(status[p.id]);
+                const linked = status.linkedProvider === p.id;
+                return (
+                    <Card key={p.id}>
+                        <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    {p.name}
+                                    {linked && <Badge className="bg-green-100 text-green-700 hover:bg-green-100"><CheckCircle2 className="w-3 h-3 mr-1" />Linked</Badge>}
+                                    {!enabled && <Badge variant="secondary">Not configured</Badge>}
+                                </CardTitle>
+                                <CardDescription>{p.desc}</CardDescription>
+                            </div>
+                            {linked ? (
+                                <Button variant="outline" onClick={unlink}>Unlink</Button>
+                            ) : (
+                                <Button onClick={() => link(p.id)} disabled={!enabled || busy !== null}>
+                                    {busy === p.id && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Link {p.name}
+                                </Button>
+                            )}
+                        </CardHeader>
+                        {!enabled && (
+                            <CardContent className="pt-0 text-xs text-gray-500">
+                                Your administrator can enable it by setting <code>{p.env}</code> on the server, with the redirect URI
+                                <code className="break-all"> {'<API_URL>'}/api/v1/sso/{p.id}/callback</code>.
+                            </CardContent>
+                        )}
+                    </Card>
+                );
+            })}
         </div>
-      </div>
-    </div>
-  );
+    );
 };
+
+export default SSOConfigPage;

@@ -22,8 +22,9 @@ import { BotWidgetSkeleton } from '@/components/skeletons';
 import { v4 as uuidv4 } from 'uuid';
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'agent' | 'system';
   content: string;
+  agentName?: string;
   sources?: any[];
   timestamp: Date;
 }
@@ -43,6 +44,11 @@ export default function BotWidgetPage() {
     const [lead, setLead] = useState({ email: '', name: '' });
     const [leadState, setLeadState] = useState<'idle' | 'sending' | 'done' | 'dismissed'>('idle');
     const [leadError, setLeadError] = useState<string | null>(null);
+    // Human takeover: 'bot' | 'requested' | 'human' | 'closed'
+    const [handoff, setHandoff] = useState<string>('bot');
+    const [handoffEmail, setHandoffEmail] = useState('');
+    const [askingHuman, setAskingHuman] = useState(false);
+    const lastPollRef = useRef<string>(new Date(0).toISOString());
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +67,37 @@ export default function BotWidgetPage() {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isThinking]);
+
+    // While a person handles the chat, poll for their replies
+    useEffect(() => {
+        if (!bot || (handoff !== 'requested' && handoff !== 'human')) return;
+        const tick = async () => {
+            try {
+                const res = await ragBotAPI.pollMessages(botId!, apiKey!, sessionIdRef.current, lastPollRef.current);
+                const { status, messages: incoming } = res.data.data;
+                setHandoff(status);
+                if (incoming.length) {
+                    lastPollRef.current = incoming[incoming.length - 1].timestamp;
+                    setMessages((prev) => [...prev, ...incoming.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }))]);
+                }
+            } catch { /* keep polling */ }
+        };
+        tick();
+        const t = setInterval(tick, 4000);
+        return () => clearInterval(t);
+    }, [bot, handoff]);
+
+    const askForHuman = async () => {
+        try {
+            setAskingHuman(false);
+            lastPollRef.current = new Date().toISOString();
+            await ragBotAPI.requestHandoff(botId!, apiKey!, { sessionId: sessionIdRef.current, email: handoffEmail || undefined });
+            setHandoff('requested');
+            setMessages((prev) => [...prev, { role: 'system', content: 'A team member has been notified and will reply here.' + (handoffEmail ? ' We\'ll also email you if you leave.' : ''), timestamp: new Date() }]);
+        } catch {
+            setMessages((prev) => [...prev, { role: 'system', content: 'Sorry, we could not reach the team right now.', timestamp: new Date() }]);
+        }
+    };
 
     const fetchConfig = async () => {
         try {
@@ -101,17 +138,21 @@ export default function BotWidgetPage() {
                 message: input,
                 sessionId: sessionIdRef.current,
                 apiKey: apiKey!,
-                history: messages.slice(-6).map(m => ({ role: m.role, content: m.content }))
+                history: messages.filter(m => m.role === 'user' || m.role === 'assistant').slice(-6).map(m => ({ role: m.role, content: m.content }))
             });
 
-            const assistantMsg: Message = {
-                role: 'assistant',
-                content: response.data.data.message,
-                sources: response.data.data.sources,
-                timestamp: new Date()
-            };
-
-            setMessages(prev => [...prev, assistantMsg]);
+            if (response.data.data.handoff) {
+                // A person is handling the chat; their reply arrives via polling
+                setHandoff(response.data.data.handoff);
+            } else {
+                const assistantMsg: Message = {
+                    role: 'assistant',
+                    content: response.data.data.message,
+                    sources: response.data.data.sources,
+                    timestamp: new Date()
+                };
+                setMessages(prev => [...prev, assistantMsg]);
+            }
         } catch (error: any) {
             setMessages(prev => [...prev, {
                 role: 'assistant',
@@ -203,7 +244,9 @@ export default function BotWidgetPage() {
             {/* Chat Area */}
             <ScrollArea className="flex-1 p-4 bg-[#f8fafc]">
                 <div className="space-y-4 pb-4">
-                    {messages.map((msg, idx) => (
+                    {messages.map((msg, idx) => msg.role === 'system' ? (
+                        <p key={idx} className="text-center text-[11px] text-gray-500 px-4">{msg.content}</p>
+                    ) : (
                         <div 
                             key={idx}
                             className={cn(
@@ -217,6 +260,7 @@ export default function BotWidgetPage() {
                                     ? "bg-indigo-600 text-white rounded-tr-none" 
                                     : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
                             )}>
+                                {msg.role === 'agent' && <p className="text-[10px] font-semibold text-indigo-600 mb-0.5">{msg.agentName || 'Support'}</p>}
                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                                 
                                 {msg.sources && msg.sources.length > 0 && bot.widget.showSources && (
@@ -254,6 +298,22 @@ export default function BotWidgetPage() {
                                 <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />
                             </div>
                         </div>
+                    )}
+                    {handoff === 'bot' && messages.filter(m => m.role === 'assistant').length >= 2 && (
+                        askingHuman ? (
+                            <div className="bg-white border border-gray-200 rounded-2xl p-3 space-y-2">
+                                <p className="text-xs text-gray-700">Leave your email in case you step away (optional):</p>
+                                <Input type="email" value={handoffEmail} onChange={(e) => setHandoffEmail(e.target.value)} placeholder="you@example.com" className="h-9 text-sm" aria-label="Your email" />
+                                <div className="flex gap-2">
+                                    <Button size="sm" className="flex-1" onClick={askForHuman}>Connect me</Button>
+                                    <Button size="sm" variant="ghost" onClick={() => setAskingHuman(false)}>Cancel</Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center">
+                                <button type="button" onClick={() => setAskingHuman(true)} className="text-xs text-indigo-600 hover:underline">Talk to a person</button>
+                            </div>
+                        )
                     )}
                     {showLeadForm && (
                         <form onSubmit={submitLead} className="bg-white border border-indigo-100 rounded-2xl p-3 shadow-sm space-y-2">

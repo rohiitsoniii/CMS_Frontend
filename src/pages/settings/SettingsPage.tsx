@@ -139,6 +139,10 @@ export default function SettingsPage() {
             settings: {
                 ...project?.settings,
                 previewUrl: formData.get('previewUrl') as string,
+                endUserUrls: {
+                    verifyEmail: (formData.get('verifyEmailUrl') as string) || undefined,
+                    resetPassword: (formData.get('resetPasswordUrl') as string) || undefined,
+                },
             }
         };
         updateProjectMutation.mutate(data);
@@ -233,6 +237,15 @@ export default function SettingsPage() {
                                         <p className="text-xs text-gray-500">
                                             Endpoint that handles the preview token. Example: <code>/api/preview</code> or <code>/preview</code>
                                         </p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Website account links</Label>
+                                        <p className="text-xs text-gray-500">
+                                            Where verification and password-reset emails send your <em>website's</em> users. Use <code>{'{token}'}</code> or we append <code>?token=</code>.
+                                            Leave empty to use your site URL + /verify-email and /reset-password.
+                                        </p>
+                                        <Input name="verifyEmailUrl" defaultValue={project.settings?.endUserUrls?.verifyEmail || ''} placeholder="https://your-site.com/verify-email" aria-label="Verify email URL" />
+                                        <Input name="resetPasswordUrl" defaultValue={project.settings?.endUserUrls?.resetPassword || ''} placeholder="https://your-site.com/reset-password" aria-label="Reset password URL" />
                                     </div>
                                     <Button type="submit" disabled={updateProjectMutation.isPending}>
                                         {updateProjectMutation.isPending ? (

@@ -13,6 +13,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { emailAPI, Subscriber, AudienceStats, errorMessage, publicApiOrigin } from '@/services/emailMarketingService';
 import { csvToContacts } from '@/lib/csv';
+import { ContactProfileDialog } from '@/components/marketing/ContactProfileDialog';
 
 const STATUS_STYLES: Record<string, string> = {
     subscribed: 'bg-green-100 text-green-700',
@@ -35,6 +36,7 @@ export default function AudiencePage() {
     const [addOpen, setAddOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
     const [tagDialog, setTagDialog] = useState<null | 'tag' | 'untag'>(null);
+    const [profileId, setProfileId] = useState<string | null>(null);
     const limit = 50;
 
     const loadStats = () => emailAPI.subscriberStats(projectId!).then((r) => setStats(r.data.data)).catch(() => undefined);
@@ -210,7 +212,7 @@ export default function AudiencePage() {
                                                 />
                                             </TableCell>
                                             <TableCell>
-                                                <div className="font-medium dark:text-white">{s.email}</div>
+                                                <button type="button" className="font-medium dark:text-white hover:text-indigo-600 text-left" onClick={() => setProfileId(s._id)}>{s.email}</button>
                                                 {s.name && <div className="text-xs text-gray-500">{s.name}</div>}
                                             </TableCell>
                                             <TableCell><span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[s.status]}`}>{s.status}</span></TableCell>
@@ -258,6 +260,7 @@ export default function AudiencePage() {
                 </TabsContent>
             </Tabs>
 
+            <ContactProfileDialog projectId={projectId!} contactId={profileId} onClose={() => setProfileId(null)} />
             <AddContactDialog open={addOpen} onOpenChange={setAddOpen} projectId={projectId!} onDone={refresh} />
             <ImportDialog open={importOpen} onOpenChange={setImportOpen} projectId={projectId!} onDone={refresh} />
             <TagDialog

@@ -45,22 +45,41 @@ import { ArchivePage } from '@/pages/archive/ArchivePage';
 import { NotFoundPage } from '@/pages/public/NotFoundPage';
 import { ContentCalendar } from '@/pages/calendar/ContentCalendar';
 import { CommandMenu } from '@/components/ui/CommandMenu';
-import CampaignsPage from '@/pages/marketing/CampaignsPage';
-import CampaignEditorPage from '@/pages/marketing/CampaignEditorPage';
-import AudiencePage from '@/pages/marketing/AudiencePage';
-import SegmentsPage from '@/pages/marketing/SegmentsPage';
-import EmailSettingsPage from '@/pages/marketing/EmailSettingsPage';
-import AISettingsPage from '@/pages/settings/AISettingsPage';
-import SeoSettingsPage from '@/pages/seo/SeoSettingsPage';
-import GeoPage from '@/pages/seo/GeoPage';
-import RedirectsPage from '@/pages/seo/RedirectsPage';
-import PageSpeedPage from '@/pages/seo/PageSpeedPage';
+import { PluginManagerPage } from '@/pages/plugins/PluginManagerPage';
 import { Toaster } from '@/components/ui';
+import { Toaster as HotToaster } from 'react-hot-toast';
 
 import { ProtectedRoute } from '@/components/auth';
 import { useAuthStore } from '@/store';
 import { restoreSession } from '@/services/api';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
+
+// Growth pages load on demand to keep the main bundle small
+const CampaignsPage = lazy(() => import('@/pages/marketing/CampaignsPage'));
+const CampaignEditorPage = lazy(() => import('@/pages/marketing/CampaignEditorPage'));
+const AudiencePage = lazy(() => import('@/pages/marketing/AudiencePage'));
+const SegmentsPage = lazy(() => import('@/pages/marketing/SegmentsPage'));
+const EmailSettingsPage = lazy(() => import('@/pages/marketing/EmailSettingsPage'));
+const AutomationsPage = lazy(() => import('@/pages/marketing/AutomationsPage'));
+const AutomationEditorPage = lazy(() => import('@/pages/marketing/AutomationEditorPage'));
+const FormsPage = lazy(() => import('@/pages/marketing/FormsPage'));
+const FormSubmissionsPage = lazy(() => import('@/pages/marketing/FormSubmissionsPage'));
+const AISettingsPage = lazy(() => import('@/pages/settings/AISettingsPage'));
+const SeoSettingsPage = lazy(() => import('@/pages/seo/SeoSettingsPage'));
+const GeoPage = lazy(() => import('@/pages/seo/GeoPage'));
+const RedirectsPage = lazy(() => import('@/pages/seo/RedirectsPage'));
+const PageSpeedPage = lazy(() => import('@/pages/seo/PageSpeedPage'));
+const SearchConsolePage = lazy(() => import('@/pages/seo/SearchConsolePage'));
+const ContentBriefPage = lazy(() => import('@/pages/seo/ContentBriefPage'));
+const WebsiteAnalyticsPage = lazy(() => import('@/pages/analytics/WebsiteAnalyticsPage'));
+const InboxPage = lazy(() => import('@/pages/chatbot/InboxPage'));
+const UsagePage = lazy(() => import('@/pages/billing/UsagePage'));
+const InstallPage = lazy(() => import('@/pages/projects/InstallPage'));
+const SsoCompletePage = lazy(() => import('@/pages/auth/SsoCompletePage'));
+
+const PageLoader = () => (
+    <div className="flex justify-center py-24"><div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>
+);
 
 // Auth redirect - redirects authenticated users away from auth pages
 function AuthRedirect({ children }: { children: React.ReactNode }) {
@@ -104,6 +123,7 @@ export default function App() {
                 Skip to main content
             </a>
             <CommandMenu />
+            <Suspense fallback={<PageLoader />}>
             <Routes>
                 {/* Public widget route */}
                 <Route path="/public/widget/:botId" element={<BotWidgetPage />} />
@@ -139,6 +159,7 @@ export default function App() {
             />
 
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/sso/complete" element={<SsoCompletePage />} />
 
             {/* Onboarding */}
             <Route
@@ -188,6 +209,7 @@ export default function App() {
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="settings/environment" element={<EnvironmentPage />} />
                 <Route path="settings/ai" element={<AISettingsPage />} />
+                <Route path="plugins" element={<PluginManagerPage />} />
                 <Route path="settings/mfa" element={<MFASetupPage />} />
                 <Route path="settings/sso" element={<SSOConfigPage />} />
                 <Route path="settings/security" element={<SecurityPage />} />
@@ -197,6 +219,7 @@ export default function App() {
 
                 {/* Billing & Pricing */}
                 <Route path="billing" element={<BillingPage />} />
+                <Route path="usage" element={<UsagePage />} />
                 <Route path="pricing" element={<PricingPage />} />
 
                 {/* Support */}
@@ -264,6 +287,7 @@ export default function App() {
 
                 {/* Analytics */}
                 <Route path="analytics" element={<AnalyticsPage />} />
+                <Route path="analytics/website" element={<WebsiteAnalyticsPage />} />
 
                 {/* API Keys */}
                 <Route path="api-keys" element={<APIKeysPage />} />
@@ -306,6 +330,12 @@ export default function App() {
                 <Route path="email/audience" element={<AudiencePage />} />
                 <Route path="email/segments" element={<SegmentsPage />} />
                 <Route path="email/settings" element={<EmailSettingsPage />} />
+                <Route path="email/automations" element={<AutomationsPage />} />
+                <Route path="email/automations/:automationId" element={<AutomationEditorPage />} />
+                <Route path="forms" element={<FormsPage />} />
+                <Route path="forms/submissions" element={<FormSubmissionsPage />} />
+                <Route path="inbox" element={<InboxPage />} />
+                <Route path="install" element={<InstallPage />} />
 
                 {/* Trash & Archive */}
                 <Route path="trash" element={<TrashPage />} />
@@ -328,6 +358,8 @@ export default function App() {
                 <Route path="seo/geo" element={<GeoPage />} />
                 <Route path="seo/redirects" element={<RedirectsPage />} />
                 <Route path="seo/pagespeed" element={<PageSpeedPage />} />
+                <Route path="seo/search-console" element={<SearchConsolePage />} />
+                <Route path="seo/brief" element={<ContentBriefPage />} />
             </Route>
 
             {/* Project-specific routes (Alias) */}
@@ -336,7 +368,10 @@ export default function App() {
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
         </Routes>
+            </Suspense>
             <Toaster />
+            {/* Many pages use react-hot-toast; without this their messages never show */}
+            <HotToaster position="bottom-right" toastOptions={{ duration: 4000 }} />
             <OfflineBanner />
         </>
     );
