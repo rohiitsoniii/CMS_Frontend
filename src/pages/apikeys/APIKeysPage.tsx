@@ -47,7 +47,8 @@ interface APIKey {
     _id: string;
     name: string;
     description?: string;
-    apiKey: string;
+    /** Only a non-secret prefix is returned after creation; the full key is shown once. */
+    keyPrefix?: string;
     permissions: string[];
     allowedOrigins: string[];
     isActive: boolean;
@@ -224,21 +225,9 @@ export default function APIKeysPage() {
                                                 <p className="text-sm text-gray-500 mb-2">{key.description}</p>
                                             )}
                                             <div className="flex items-center gap-2">
-                                                <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
-                                                    {key.apiKey.slice(0, 20)}...
+                                                <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono" title="The full key was shown once when it was created">
+                                                    {key.keyPrefix ? `${key.keyPrefix}…` : 'hidden'}
                                                 </code>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6"
-                                                    onClick={() => copyToClipboard(key.apiKey, key._id)}
-                                                >
-                                                    {copiedField === key._id ? (
-                                                        <Check className="w-3 h-3 text-emerald-500" />
-                                                    ) : (
-                                                        <Copy className="w-3 h-3" />
-                                                    )}
-                                                </Button>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-gray-500">
                                                 <span className="flex items-center gap-1">

@@ -306,12 +306,13 @@ export default function KnowledgeBasePage() {
                         className="pl-10"
                     />
                 </div>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                {/* Radix Select forbids empty item values; "__all" stands for no filter */}
+                <Select value={selectedCategory || '__all'} onValueChange={(v) => setSelectedCategory(v === '__all' ? '' : v)}>
                     <SelectTrigger className="w-48">
                         <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="">All Categories</SelectItem>
+                        <SelectItem value="__all">All Categories</SelectItem>
                         {data?.categories?.map((cat: Category) => (
                             <SelectItem key={cat.name} value={cat.name}>
                                 {cat.name} ({cat.count})

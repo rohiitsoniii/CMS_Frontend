@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { api } from '@/services/api';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -49,12 +50,7 @@ export function AIAssistant({
     // Generate blog post
     const generateBlogMutation = useMutation({
         mutationFn: async (topic: string) => {
-            const response = await fetch('/api/v1/ai/generate/blog-post', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic }),
-            });
-            const data = await response.json();
+            const { data } = await api.post('/ai/generate/blog-post', { topic });
             return data.data;
         },
         onSuccess: (data) => {
@@ -69,12 +65,7 @@ export function AIAssistant({
     // Generate tags
     const generateTagsMutation = useMutation({
         mutationFn: async (content: string) => {
-            const response = await fetch('/api/v1/ai/seo/tags', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, maxTags: 5 }),
-            });
-            const data = await response.json();
+            const { data } = await api.post('/ai/seo/tags', { content, maxTags: 5 });
             return data.data.tags;
         },
         onSuccess: (tags) => {
@@ -90,12 +81,7 @@ export function AIAssistant({
     // Improve content
     const improveContentMutation = useMutation({
         mutationFn: async (content: string) => {
-            const response = await fetch('/api/v1/ai/improve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content }),
-            });
-            const data = await response.json();
+            const { data } = await api.post('/ai/improve', { content });
             return data.data.improvedContent;
         },
         onSuccess: (improved) => {
@@ -110,12 +96,7 @@ export function AIAssistant({
     // Translate content
     const translateMutation = useMutation({
         mutationFn: async ({ content, language }: { content: string; language: string }) => {
-            const response = await fetch('/api/v1/ai/translate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, targetLanguage: language }),
-            });
-            const data = await response.json();
+            const { data } = await api.post('/ai/translate', { content, targetLanguage: language });
             return data.data.translation;
         },
         onSuccess: (translation) => {
@@ -130,12 +111,7 @@ export function AIAssistant({
     // Generate meta description
     const generateMetaMutation = useMutation({
         mutationFn: async ({ title, content }: { title: string; content: string }) => {
-            const response = await fetch('/api/v1/ai/seo/meta-description', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, content }),
-            });
-            const data = await response.json();
+            const { data } = await api.post('/ai/seo/meta-description', { title, content });
             return data.data.metaDescription;
         },
         onSuccess: (meta) => {
@@ -150,12 +126,7 @@ export function AIAssistant({
     // Generate email
         const generateEmailMutation = useMutation({
             mutationFn: async ({ topic, type }: { topic: string; type: string }) => {
-                const response = await fetch('/api/v1/ai/generate/email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ topic, type }),
-                });
-                const data = await response.json();
+                const { data } = await api.post('/ai/generate/email', { topic, type });
                 return data.data;
             },
             onSuccess: (data) => {

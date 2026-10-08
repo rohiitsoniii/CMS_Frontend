@@ -218,12 +218,12 @@ export function AdvancedSearch() {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <Label>Content Type</Label>
-                                <Select value={filters.type} onValueChange={(value) => setFilters({ ...filters, type: value })}>
+                                <Select value={filters.type || '__all'} onValueChange={(value) => setFilters({ ...filters, type: value === '__all' ? '' : value })}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="All types" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All types</SelectItem>
+                                        <SelectItem value="__all">All types</SelectItem>
                                         <SelectItem value="blog">Blog</SelectItem>
                                         <SelectItem value="page">Page</SelectItem>
                                         <SelectItem value="product">Product</SelectItem>
@@ -233,12 +233,12 @@ export function AdvancedSearch() {
 
                             <div>
                                 <Label>Status</Label>
-                                <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
+                                <Select value={filters.status || '__all'} onValueChange={(value) => setFilters({ ...filters, status: value === '__all' ? '' : value })}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="All statuses" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All statuses</SelectItem>
+                                        <SelectItem value="__all">All statuses</SelectItem>
                                         <SelectItem value="draft">Draft</SelectItem>
                                         <SelectItem value="published">Published</SelectItem>
                                         <SelectItem value="archived">Archived</SelectItem>
@@ -248,12 +248,12 @@ export function AdvancedSearch() {
 
                             <div>
                                 <Label>Language</Label>
-                                <Select value={filters.locale} onValueChange={(value) => setFilters({ ...filters, locale: value })}>
+                                <Select value={filters.locale || '__all'} onValueChange={(value) => setFilters({ ...filters, locale: value === '__all' ? '' : value })}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="All languages" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All languages</SelectItem>
+                                        <SelectItem value="__all">All languages</SelectItem>
                                         <SelectItem value="en">English</SelectItem>
                                         <SelectItem value="es">Spanish</SelectItem>
                                         <SelectItem value="fr">French</SelectItem>

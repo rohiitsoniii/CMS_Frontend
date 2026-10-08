@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { api } from '@/services/api';
+import { api, csrfHeaders } from '@/services/api';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
 import { useAuthStore } from '@/store';
 
@@ -29,7 +29,7 @@ export default function SsoCompletePage() {
         }
         (async () => {
             try {
-                const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+                const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true, headers: csrfHeaders() });
                 const tokens = res.data?.data?.tokens;
                 if (!tokens?.accessToken) throw new Error('No session');
                 if (params.get('mfa') === '1') {

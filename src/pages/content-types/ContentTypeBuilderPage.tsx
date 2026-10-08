@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
+import { contentTypeService } from '@/services/contentTypeService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -77,7 +78,8 @@ interface Field {
 }
 
 export function ContentTypeBuilderPage() {
-    const { projectId, typeId } = useParams();
+    // Route param is :contentTypeId (App.tsx); accepts an _id or apiId
+    const { projectId, contentTypeId: typeId } = useParams();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
 
@@ -97,9 +99,7 @@ export function ContentTypeBuilderPage() {
         queryKey: ['content-type', projectId, typeId],
         queryFn: async () => {
             if (!typeId) return null;
-            const response = await fetch(`/api/v1/projects/${projectId}/content-types/${typeId}`);
-            const data = await response.json();
-            return data.data.contentType;
+            return contentTypeService.getContentType(typeId);
         },
         enabled: !!typeId,
     });
@@ -109,36 +109,28 @@ export function ContentTypeBuilderPage() {
         if (contentType) {
             setName(contentType.name);
             setDescription(contentType.description || '');
-            setIcon(contentType.icon || '📄');
-            setFields(contentType.fields || []);
+            setIcon((contentType as { icon?: string }).icon || '📄');
+            setFields((contentType.fields || []).map((f, i) => ({
+                ...f,
+                id: (f as { id?: string }).id || `field_${i}_${f.name}`,
+            })) as Field[]);
         }
     }, [contentType]);
 
     // Save mutation
     const saveMutation = useMutation({
         mutationFn: async (data: any) => {
-            const url = typeId
-                ? `/api/v1/projects/${projectId}/content-types/${typeId}`
-                : `/api/v1/projects/${projectId}/content-types`;
-
-            const method = typeId ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!response.ok) throw new Error('Failed to save content type');
-            return response.json();
+            return typeId
+                ? contentTypeService.updateContentType(typeId, data)
+                : contentTypeService.createContentType({ ...data, projectId });
         },
         onSuccess: () => {
             toast.success(typeId ? 'Content type updated' : 'Content type created');
             queryClient.invalidateQueries({ queryKey: ['content-types', projectId] });
-            navigate(`/dashboard/projects/${projectId}/content-types`);
+            navigate(`/dashboard/project/${projectId}/content-types`);
         },
-        onError: () => {
-            toast.error('Failed to save content type');
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || err?.response?.data?.error || 'Failed to save content type');
         },
     });
 

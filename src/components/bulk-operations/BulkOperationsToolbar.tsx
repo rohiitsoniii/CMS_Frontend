@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'react-hot-toast';
-import axios from 'axios';
+import { api } from '@/services/api';
 
 interface BulkOperationsToolbarProps {
   selectedIds: string[];
@@ -26,7 +26,7 @@ export function BulkOperationsToolbar({ selectedIds, onComplete, projectId }: Bu
 
   const handleBulkPublish = async () => {
     try {
-      await axios.post('/api/v1/bulk-operations/bulk/publish', { contentIds: selectedIds });
+      await api.post('/bulk-operations/bulk/publish', { contentIds: selectedIds });
       toast.success(`Published ${selectedIds.length} items`);
       onComplete();
     } catch {
@@ -36,7 +36,7 @@ export function BulkOperationsToolbar({ selectedIds, onComplete, projectId }: Bu
 
   const handleBulkUnpublish = async () => {
     try {
-      await axios.post('/api/v1/bulk-operations/bulk/unpublish', { contentIds: selectedIds });
+      await api.post('/bulk-operations/bulk/unpublish', { contentIds: selectedIds });
       toast.success(`Unpublished ${selectedIds.length} items`);
       onComplete();
     } catch {
@@ -46,7 +46,7 @@ export function BulkOperationsToolbar({ selectedIds, onComplete, projectId }: Bu
 
   const handleBulkDelete = async () => {
     try {
-      await axios.post(`/api/v1/bulk-operations/projects/${projectId}/bulk/delete`, { contentIds: selectedIds });
+      await api.post(`/bulk-operations/projects/${projectId}/bulk/delete`, { contentIds: selectedIds });
       toast.success(`Deleted ${selectedIds.length} items`);
       onComplete();
     } catch {
@@ -58,7 +58,7 @@ export function BulkOperationsToolbar({ selectedIds, onComplete, projectId }: Bu
 
   const handleBulkDuplicate = async () => {
     try {
-      await axios.post('/api/v1/duplication/content/bulk-duplicate', { 
+      await api.post('/duplication/content/bulk-duplicate', { 
         contentIds: selectedIds,
         options: { includeRelationships: false }
       });
@@ -74,7 +74,7 @@ export function BulkOperationsToolbar({ selectedIds, onComplete, projectId }: Bu
     if (tagArray.length === 0) return;
 
     try {
-      await axios.post('/api/v1/bulk-operations/bulk/add-tags', { 
+      await api.post('/bulk-operations/bulk/add-tags', { 
         contentIds: selectedIds,
         tags: tagArray
       });
@@ -91,7 +91,7 @@ export function BulkOperationsToolbar({ selectedIds, onComplete, projectId }: Bu
     if (!publishAt) return;
 
     try {
-      await axios.post('/api/v1/bulk-operations/bulk/schedule', {
+      await api.post('/bulk-operations/bulk/schedule', {
         contentIds: selectedIds,
         publishAt,
         unpublishAt: unpublishAt || undefined

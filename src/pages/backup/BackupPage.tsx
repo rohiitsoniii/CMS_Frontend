@@ -40,7 +40,8 @@ export const BackupPage: React.FC = () => {
       setLoading(true);
       const response = await backupAPI.getAll(projectId!);
       if (response.data.success) {
-        setBackups(response.data.data);
+        const payload = response.data.data;
+        setBackups(Array.isArray(payload) ? payload : payload?.backups || []);
       }
     } catch (error) {
       console.error('Failed to fetch backups:', error);

@@ -73,10 +73,22 @@ describe('restoreSession', () => {
     useAuthStore.setState({ accessToken: null, user: null, tenant: null, isAuthenticated: false });
   });
 
+  it('restores from the session cookie without rotating tokens', async () => {
+    const setAuthSpy = vi.spyOn(useAuthStore.getState(), 'setAuth');
+    mockGet.mockResolvedValueOnce({ status: 200, data: { data: { user: { id: '1', email: 'a@b.com' }, tenant: { id: 't1' } } } });
+    useAuthStore.setState({ isAuthenticated: true, accessToken: null });
+
+    expect(await restoreSession()).toBe(true);
+    expect(setAuthSpy).toHaveBeenCalled();
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
   it('returns true and sets auth when refresh succeeds', async () => {
     const setAuthSpy = vi.spyOn(useAuthStore.getState(), 'setAuth');
     const logoutSpy = vi.spyOn(useAuthStore.getState(), 'logout');
     
+    // Access cookie expired -> fall back to refresh
+    mockGet.mockResolvedValueOnce({ status: 401, data: {} });
     mockPost.mockResolvedValueOnce({ data: { data: { tokens: { accessToken: 'new-at', refreshToken: 'new-rt' } } } });
     mockGet.mockResolvedValueOnce({
       data: { data: { user: { id: '1', email: 'a@b.com' }, tenant: { id: 't1' } } }

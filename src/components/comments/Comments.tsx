@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'react-hot-toast';
-import axios from 'axios';
+import { api } from '@/services/api';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Comment {
@@ -38,10 +38,10 @@ export function Comments({ contentId, projectId, fieldPath }: CommentsProps) {
   const loadComments = async () => {
     try {
       const url = fieldPath
-        ? `/api/v1/comments/content/${contentId}/comments/field/${fieldPath}`
-        : `/api/v1/comments/content/${contentId}/comments?includeResolved=${showResolved}`;
+        ? `/comments/content/${contentId}/comments/field/${fieldPath}`
+        : `/comments/content/${contentId}/comments?includeResolved=${showResolved}`;
       
-      const response = await axios.get(url);
+      const response = await api.get(url);
       setComments(response.data);
     } catch {
       toast.error('Failed to load comments');
@@ -52,7 +52,7 @@ export function Comments({ contentId, projectId, fieldPath }: CommentsProps) {
     if (!newComment.trim()) return;
 
     try {
-      await axios.post(`/api/v1/comments/projects/${projectId}/content/${contentId}/comments`, {
+      await api.post(`/comments/projects/${projectId}/content/${contentId}/comments`, {
         content: newComment,
         fieldPath,
         parentId: replyTo
@@ -69,7 +69,7 @@ export function Comments({ contentId, projectId, fieldPath }: CommentsProps) {
 
   const handleResolve = async (commentId: string) => {
     try {
-      await axios.post(`/api/v1/comments/comments/${commentId}/resolve`);
+      await api.post(`/comments/comments/${commentId}/resolve`);
       loadComments();
       toast.success('Comment resolved');
     } catch {
@@ -81,7 +81,7 @@ export function Comments({ contentId, projectId, fieldPath }: CommentsProps) {
     if (!deleteCommentId) return;
 
     try {
-      await axios.delete(`/api/v1/comments/comments/${deleteCommentId}`);
+      await api.delete(`/comments/comments/${deleteCommentId}`);
       loadComments();
       toast.success('Comment deleted');
     } catch {

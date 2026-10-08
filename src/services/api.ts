@@ -27,6 +27,12 @@ export const readCsrfToken = (): string | null => {
   return match ? decodeURIComponent(match.split('=')[1]) : null;
 };
 
+/** CSRF header for calls made outside the `api` instance (cookie-authenticated mutations). */
+export const csrfHeaders = (): Record<string, string> => {
+  const csrf = readCsrfToken();
+  return csrf ? { 'x-csrf-token': csrf } : {};
+};
+
 // Request interceptor: attach memory token (if any) + CSRF header on mutations
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -90,7 +96,7 @@ api.interceptors.response.use(
         const response = await axios.post(
           `${API_BASE_URL}/auth/refresh`,
           {},
-          { withCredentials: true }
+          { withCredentials: true, headers: csrfHeaders() }
         );
 
         const tokens = response.data?.data?.tokens || response.data?.tokens;
@@ -115,7 +121,7 @@ api.interceptors.response.use(
         processQueue(refreshError, null);
         isRefreshing = false;
         try {
-          await axios.post(`${API_BASE_URL}/auth/logout`, {}, { withCredentials: true });
+          await axios.post(`${API_BASE_URL}/auth/logout`, {}, { withCredentials: true, headers: csrfHeaders() });
         } catch {
           // ignore — already unauthenticated
         }
@@ -134,7 +140,7 @@ api.interceptors.response.use(
           url: window.location.href,
           userAgent: navigator.userAgent,
           severity: 'high'
-        }, { withCredentials: true });
+        }, { withCredentials: true, headers: csrfHeaders() });
       } catch (logError) {
         // Silently ignore logging failures to prevent infinite error loops
       }
@@ -157,7 +163,7 @@ if (typeof window !== 'undefined') {
       colno: event.colno,
       url: window.location.href,
       severity: 'medium'
-    }, { withCredentials: true }).catch(() => {});
+    }, { withCredentials: true, headers: csrfHeaders() }).catch(() => {});
   });
 }
 
@@ -466,7 +472,14 @@ export const restoreSession = async (): Promise<boolean> => {
   const { isAuthenticated, accessToken, setAuth, logout } = useAuthStore.getState();
   if (!isAuthenticated || accessToken) return isAuthenticated;
   try {
-    const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+    // The httpOnly access cookie usually still works: no token rotation needed
+    const fromCookie = await axios.get(`${API_BASE_URL}/auth/me`, { withCredentials: true, validateStatus: (s) => s === 200 || s === 401 });
+    if (fromCookie.status === 200) {
+      const { user, tenant } = fromCookie.data.data;
+      setAuth(user, tenant);
+      return true;
+    }
+    const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true, headers: csrfHeaders() });
     const tokens = res.data?.data?.tokens;
     if (!tokens?.accessToken) throw new Error('No token');
     const me = await axios.get(`${API_BASE_URL}/auth/me`, {
